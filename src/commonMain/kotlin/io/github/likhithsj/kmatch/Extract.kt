@@ -56,11 +56,16 @@ public fun extractOne(
 ): ExtractedResult? {
     val processedQuery = if (processor != null) processor(query) else query
     val cutoff = scoreCutoff ?: 0.0
+    // For built-in scorers, convert the query once and reuse its match masks
+    // across the whole scan; custom scorers see the string-based path.
+    val prepared = prepareScorer(scorer, processedQuery.toCodePoints())
     var best: ExtractedResult? = null
     var currentCutoff = scoreCutoff
     for ((index, choice) in choices.withIndex()) {
         val processedChoice = if (processor != null) processor(choice) else choice
-        val score = scorer.score(processedQuery, processedChoice, currentCutoff)
+        val score =
+            if (prepared != null) prepared.score(processedChoice.toCodePoints(), currentCutoff ?: 0.0)
+            else scorer.score(processedQuery, processedChoice, currentCutoff)
         if (score >= cutoff && (best == null || score > best.score)) {
             best = ExtractedResult(choice, score, index)
             currentCutoff = score
@@ -115,10 +120,15 @@ public fun extractAll(
 ): List<ExtractedResult> {
     val processedQuery = if (processor != null) processor(query) else query
     val cutoff = scoreCutoff ?: 0.0
+    // For built-in scorers, convert the query once and reuse its match masks
+    // across the whole scan; custom scorers see the string-based path.
+    val prepared = prepareScorer(scorer, processedQuery.toCodePoints())
     val results = ArrayList<ExtractedResult>()
     for ((index, choice) in choices.withIndex()) {
         val processedChoice = if (processor != null) processor(choice) else choice
-        val score = scorer.score(processedQuery, processedChoice, scoreCutoff)
+        val score =
+            if (prepared != null) prepared.score(processedChoice.toCodePoints(), scoreCutoff ?: 0.0)
+            else scorer.score(processedQuery, processedChoice, scoreCutoff)
         if (score >= cutoff) {
             results.add(ExtractedResult(choice, score, index))
         }

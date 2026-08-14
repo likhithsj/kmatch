@@ -184,21 +184,25 @@ private fun normDistance(dist: Int, lensum: Int, scoreCutoff: Double): Double {
  * boundary character does not occur in `shorter` at all. Assumes
  * `shorter.size <= longer.size`. Cutoff is on the 0-1 scale here.
  */
-private fun partialRatioImpl(shorter: IntArray, longer: IntArray, scoreCutoffIn: Double): Double {
+private fun partialRatioImpl(
+    shorter: IntArray,
+    longer: IntArray,
+    scoreCutoffIn: Double,
+    // Match masks are built once and reused for every window scan; callers
+    // scanning a collection can pass a prebuilt pattern for the query side.
+    pattern: IndelPattern = IndelPattern(shorter),
+): Double {
     val len1 = shorter.size
     val len2 = longer.size
     if (len1 == 0) return 0.0
-
-    val charSet = HashSet<Int>(len1 * 2)
-    for (cp in shorter) charSet.add(cp)
 
     var scoreCutoff = scoreCutoffIn
     var best = 0.0
 
     // Windows hanging off the start: longer[0 until i).
     for (i in 1 until len1) {
-        if (longer[i - 1] !in charSet) continue
-        val sim = indelNormalizedSimilarity(shorter, longer.copyOfRange(0, i), scoreCutoff)
+        if (longer[i - 1] !in pattern) continue
+        val sim = indelNormalizedSimilarity(pattern, longer, 0, i, scoreCutoff)
         if (sim > best) {
             best = sim
             scoreCutoff = sim
@@ -208,8 +212,8 @@ private fun partialRatioImpl(shorter: IntArray, longer: IntArray, scoreCutoffIn:
 
     // Full-length windows: longer[i until i + len1).
     for (i in 0 until len2 - len1) {
-        if (longer[i + len1 - 1] !in charSet) continue
-        val sim = indelNormalizedSimilarity(shorter, longer.copyOfRange(i, i + len1), scoreCutoff)
+        if (longer[i + len1 - 1] !in pattern) continue
+        val sim = indelNormalizedSimilarity(pattern, longer, i, i + len1, scoreCutoff)
         if (sim > best) {
             best = sim
             scoreCutoff = sim
@@ -219,8 +223,8 @@ private fun partialRatioImpl(shorter: IntArray, longer: IntArray, scoreCutoffIn:
 
     // Windows hanging off the end: longer[i until len2).
     for (i in len2 - len1 until len2) {
-        if (longer[i] !in charSet) continue
-        val sim = indelNormalizedSimilarity(shorter, longer.copyOfRange(i, len2), scoreCutoff)
+        if (longer[i] !in pattern) continue
+        val sim = indelNormalizedSimilarity(pattern, longer, i, len2, scoreCutoff)
         if (sim > best) {
             best = sim
             scoreCutoff = sim
@@ -247,6 +251,30 @@ internal fun partialRatioCps(a: IntArray, b: IntArray, scoreCutoffIn: Double): D
         if (res2 > res) res = res2
     }
 
+    return if (res < scoreCutoff) 0.0 else res
+}
+
+/**
+ * [partialRatioCps] with prebuilt match masks for [q] (the query side).
+ * Reuse only applies while the query is the shorter side; other shapes fall
+ * back to the regular computation, keeping semantics identical.
+ */
+internal fun partialRatioCpsCached(
+    qPattern: IndelPattern,
+    q: IntArray,
+    c: IntArray,
+    scoreCutoffIn: Double,
+): Double {
+    if (q.isEmpty() && c.isEmpty()) return 100.0
+    if (q.size > c.size) return partialRatioCps(q, c, scoreCutoffIn)
+
+    var scoreCutoff = scoreCutoffIn
+    var res = partialRatioImpl(q, c, scoreCutoff / 100.0, qPattern)
+    if (res != 100.0 && q.size == c.size) {
+        scoreCutoff = max(scoreCutoff, res)
+        val res2 = partialRatioImpl(c, q, scoreCutoff / 100.0)
+        if (res2 > res) res = res2
+    }
     return if (res < scoreCutoff) 0.0 else res
 }
 
@@ -292,7 +320,7 @@ private fun joinTokens(tokens: Collection<List<Int>>): IntArray {
     return out
 }
 
-private fun sortJoin(tokens: Collection<List<Int>>): IntArray =
+internal fun sortJoin(tokens: Collection<List<Int>>): IntArray =
     joinTokens(tokens.sortedWith(TOKEN_COMPARATOR))
 
 /** Length of the joined form without materializing it. */

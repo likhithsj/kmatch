@@ -3,11 +3,12 @@
 Fast, RapidFuzz-compatible fuzzy string matching for Kotlin Multiplatform.
 
 - **Verified parity** — bit-exact with [RapidFuzz](https://github.com/rapidfuzz/RapidFuzz), checked against 1,460 golden vectors on every commit. Tune thresholds in a Python notebook, ship the numbers to Kotlin unchanged.
+- **Bit-parallel core** — Hyyrö's bit-parallel LCS packs the DP column into machine words; extraction scans reuse the query's match masks across the whole collection and short-circuit on `scoreCutoff`.
 - **Correct on full Unicode** — all algorithms operate on code points, never UTF-16 chars. A single emoji is one symbol, astral-plane characters sort correctly, and `defaultProcess` uses the exact Unicode tables of RapidFuzz's C++ backend.
 - **Every KMP target** — JVM (serves Android), JS, Wasm, iOS (including `iosX64`), macOS, watchOS, tvOS, Linux, Windows, Android Native.
 - **Zero runtime dependencies**, MIT licensed.
 
-> Status: pre-release (`0.1.0-SNAPSHOT`). The parity core is complete and verified; first Maven Central release is upcoming. The bit-parallel performance core lands in 0.2.0 behind the same frozen API.
+> Status: pre-release (`0.2.0-SNAPSHOT`). The parity core and the bit-parallel performance core are complete and verified; first Maven Central release is upcoming.
 
 ## Scorers
 
@@ -60,11 +61,26 @@ extractOne("query", choices, scorer = exact)
 
 `defaultProcess` and tokenization use Unicode tables probed directly from RapidFuzz's C++ backend (`tools/generate_unicode_tables.py`) rather than any host platform's Unicode APIs — the backends genuinely differ from both Python's `re` module and Java's `Character` (underscore handling, NBSP tokenization, simple vs. full case mapping), and the probe-derived tables make kmatch match what RapidFuzz users actually observe.
 
+## Performance
+
+The Hyyrö bit-parallel LCS replaces the 0.1.0 code-point DP behind the same frozen API — every output is proven unchanged by the golden vectors plus randomized equivalence tests against the DP (kept in test sources as the reference).
+
+Where the speed shows up, measured by the in-repo benchmark (`KMATCH_BENCH=1 ./gradlew jvmTest --tests '*BenchmarkTest'`, JVM 21, median of 7 rounds):
+
+| Workload | 0.1.0 DP | 0.2.0 | Speedup |
+|---|---|---|---|
+| `extractOne`, 20k choices, `ratio` | 66 ms | 4.6 ms | **~14×** |
+| ...with `scoreCutoff = 80` | 66 ms | 4.0 ms | **~16×** |
+| Pairwise `ratio`, ~370 code points | 51 ms / 300 pairs | 13 ms | **~4×** |
+| Pairwise `ratio`, ~36 code points | 8.3 ms / 2000 pairs | 10.2 ms | ~0.8× |
+
+Collection scans win big because the query's match masks are built once and reused for every choice, and `scoreCutoff` aborts comparisons whose length difference already rules them out. One-shot calls on short string pairs are microsecond-scale either way; if you score one query against many strings, use the `extract*` functions rather than looping over `Fuzz.ratio` yourself. Numbers are indicative (container hardware), and the harness is committed so you can reproduce them on yours.
+
 ## Roadmap
 
 - **0.1.0** — Parity core (code-point DP), string extraction, golden vectors on all targets, first Maven Central release.
-- **0.2.0** — Myers/Hyyrö bit-parallel edit distance and cutoff short-circuiting behind the unchanged API; published benchmarks vs existing Kotlin libraries.
-- **0.3.0** — Generic extraction over `T` with `keySelector`, `dedupe`, `matchingRanges`.
+- **0.2.0** — Hyyrö bit-parallel edit distance, mask reuse across extraction scans, and cutoff short-circuiting behind the unchanged API. ✅ implemented
+- **0.3.0** — Generic extraction over `T` with `keySelector`, `dedupe`, `matchingRanges`; benchmarks vs other Kotlin fuzzy-matching libraries.
 - **1.0.0** — API freeze, documentation site, Wasm demo.
 
 ## License
