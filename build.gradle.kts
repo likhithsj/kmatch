@@ -1,6 +1,28 @@
 plugins {
     kotlin("multiplatform") version "2.2.21"
     id("com.vanniktech.maven.publish") version "0.37.0"
+    id("org.jetbrains.dokka") version "2.2.0"
+}
+
+dokka {
+    moduleName.set("kmatch")
+    dokkaPublications.html {
+        failOnWarning.set(false)
+    }
+    // The entire public API lives in commonMain; documenting only it keeps
+    // the site free of per-target duplicates (and native-toolchain needs).
+    dokkaSourceSets.configureEach {
+        suppress.set(name != "commonMain")
+        includes.from("docs/module.md")
+        sourceLink {
+            localDirectory.set(file("src"))
+            remoteUrl("https://github.com/likhithsj/kmatch/tree/main/src")
+            remoteLineSuffix.set("#L")
+        }
+    }
+    pluginsConfiguration.html {
+        footerMessage.set("kmatch — MIT licensed")
+    }
 }
 
 kotlin {

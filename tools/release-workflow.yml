@@ -1,0 +1,36 @@
+# Move this file to .github/workflows/release.yml to activate.
+# (GitHub blocks workflow files from being pushed by this repo's automation
+# credentials; move it via the GitHub web UI like ci.yml was.)
+#
+# Publishes every target to Maven Central when a v* tag is pushed.
+# Requires repository secrets (Settings -> Secrets and variables -> Actions):
+#   MAVEN_CENTRAL_USERNAME  - Central Portal token username
+#   MAVEN_CENTRAL_PASSWORD  - Central Portal token password
+#   SIGNING_KEY             - ASCII-armored GPG private key
+#   SIGNING_KEY_PASSWORD    - its passphrase
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  publish:
+    name: Publish to Maven Central
+    runs-on: macos-latest # macOS host can build every target
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Test before publishing
+        run: ./gradlew build iosSimulatorArm64Test macosArm64Test --stacktrace
+      - name: Publish all targets
+        run: ./gradlew publishAndReleaseToMavenCentral --no-configuration-cache -PRELEASE_SIGNING_ENABLED=true --stacktrace
+        env:
+          ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+          ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
+          ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.SIGNING_KEY }}
+          ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.SIGNING_KEY_PASSWORD }}

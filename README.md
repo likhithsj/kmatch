@@ -10,6 +10,13 @@ Fast, RapidFuzz-compatible fuzzy string matching for Kotlin Multiplatform.
 
 > Status: pre-release (`0.3.0-SNAPSHOT`). The parity core, the bit-parallel performance core, and the full extraction API are complete and verified; first Maven Central release is upcoming.
 
+## Install
+
+```kotlin
+// Not yet on Maven Central -- coordinates reserved for the first release:
+implementation("io.github.likhithsj:kmatch:0.3.0")
+```
+
 ## Scorers
 
 All scorers return a `Double` on RapidFuzz's 0–100 scale and match its output exactly:
