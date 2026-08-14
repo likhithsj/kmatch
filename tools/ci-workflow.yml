@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test-linux:
+    name: Test (jvm, js, wasm, linux)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@v4
+      - run: ./gradlew jvmTest jsNodeTest wasmJsNodeTest linuxX64Test --stacktrace
+
+  test-macos:
+    name: Full matrix (macOS)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@v4
+      # build compiles every target (iosX64 is compile-verified only: Apple
+      # Silicon runners cannot execute x64 simulator tests).
+      - run: ./gradlew build iosSimulatorArm64Test macosArm64Test --stacktrace
+
+  golden-vector-drift:
+    name: Golden vector drift check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install rapidfuzz==3.14.5
+      - name: Regenerate vectors and Unicode tables
+        run: |
+          python3 tools/generate_vectors.py
+          python3 tools/generate_unicode_tables.py
+      - name: Fail on drift
+        run: git diff --exit-code
