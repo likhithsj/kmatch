@@ -8,7 +8,7 @@ Fast, RapidFuzz-compatible fuzzy string matching for Kotlin Multiplatform.
 - **Every KMP target** — JVM (serves Android), JS, Wasm, iOS (including `iosX64`), macOS, watchOS, tvOS, Linux, Windows, Android Native.
 - **Zero runtime dependencies**, MIT licensed.
 
-> Status: pre-release (`0.2.0-SNAPSHOT`). The parity core and the bit-parallel performance core are complete and verified; first Maven Central release is upcoming.
+> Status: pre-release (`0.3.0-SNAPSHOT`). The parity core, the bit-parallel performance core, and the full extraction API are complete and verified; first Maven Central release is upcoming.
 
 ## Scorers
 
@@ -55,6 +55,30 @@ val exact = Scorer { a, b, _ -> if (a == b) 100.0 else 0.0 }
 extractOne("query", choices, scorer = exact)
 ```
 
+Extraction is generic — score your records directly with a `keySelector` and get the records back:
+
+```kotlin
+data class City(val name: String, val population: Int)
+
+extractOne("new york", cities, keySelector = { it.name }, processor = ::defaultProcess)
+// ExtractedItem(item=City(name=New York, population=8300000), score=100.0, index=0)
+```
+
+## Dedupe and match highlighting
+
+```kotlin
+// Collapse near-duplicates (fuzzywuzzy process.dedupe semantics: each
+// duplicate group keeps its longest entry).
+dedupe(listOf("Frodo Baggins", "Frodo Baggin", "F. Baggins", "Gandalf"))
+// [Frodo Baggins, Gandalf]
+
+// Highlight why a choice matched: char-index ranges into the choice string.
+matchingRanges("new york", "the new york times")   // ranges covering "new york"
+matchingBlocks("kitten", "sitting")                // aligned blocks in both strings
+```
+
+`matchingBlocks`/`matchingRanges` recover one optimal indel alignment with Hirschberg's algorithm — linear memory, so long inputs are safe. Indices are UTF-16 char units, directly usable with `substring` or `AnnotatedString` (astral-plane characters handled correctly).
+
 ## How parity is verified
 
 `tools/generate_vectors.py` pins RapidFuzz 3.14.5 and emits `GoldenVectors.kt` — 1,460 (inputs, scorer, expected score) cases covering plain ASCII, accented Latin, astral-plane characters, empty strings, strings past 64 code points, token edge cases, and non-Latin scripts through `defaultProcess`. CI asserts **exact** float64 equality on every tested target and regenerates the vectors to catch drift.
@@ -76,11 +100,23 @@ Where the speed shows up, measured by the in-repo benchmark (`KMATCH_BENCH=1 ./g
 
 Collection scans win big because the query's match masks are built once and reused for every choice, and `scoreCutoff` aborts comparisons whose length difference already rules them out. One-shot calls on short string pairs are microsecond-scale either way; if you score one query against many strings, use the `extract*` functions rather than looping over `Fuzz.ratio` yourself. Numbers are indicative (container hardware), and the harness is committed so you can reproduce them on yours.
 
+### vs other JVM/Kotlin libraries
+
+Same harness (`thirdPartyComparison`), same data, each library's own API; 2,000 pairs / 20,000-choice scan, JVM 21:
+
+| Workload | kmatch | [me.xdrop:fuzzywuzzy](https://github.com/xdrop/fuzzywuzzy) 1.4.0 | [kt-fuzzy](https://solo-studios.ca/) 0.1.0 |
+|---|---|---|---|
+| `ratio`, 2k pairs | **1.8 ms** | 15.2 ms (8.4× slower) | 39.3 ms (22× slower) |
+| `partialRatio`, 2k pairs | **20.9 ms** | 172.9 ms (8.3× slower) | 35.8 ms (1.7× slower) |
+| `extractOne`, 20k choices (WRatio) | **66.9 ms** | 801.2 ms (12× slower) | — no extraction API |
+
+Throughput comparison only — output scales and rounding differ between libraries (kmatch is the one matching RapidFuzz bit-exactly). Both libraries are JVM-test-only dependencies of the benchmark; the shipped artifact stays zero-dependency.
+
 ## Roadmap
 
 - **0.1.0** — Parity core (code-point DP), string extraction, golden vectors on all targets, first Maven Central release.
 - **0.2.0** — Hyyrö bit-parallel edit distance, mask reuse across extraction scans, and cutoff short-circuiting behind the unchanged API. ✅ implemented
-- **0.3.0** — Generic extraction over `T` with `keySelector`, `dedupe`, `matchingRanges`; benchmarks vs other Kotlin fuzzy-matching libraries.
+- **0.3.0** — Generic extraction over `T` with `keySelector`, `dedupe`, `matchingRanges`; benchmarks vs other Kotlin fuzzy-matching libraries. ✅ implemented
 - **1.0.0** — API freeze, documentation site, Wasm demo.
 
 ## License

@@ -42,5 +42,10 @@ kotlin {
         commonTest.dependencies {
             implementation(kotlin("test"))
         }
+        jvmTest.dependencies {
+            // Benchmark comparisons only (KMATCH_BENCH=1); never shipped.
+            implementation("me.xdrop:fuzzywuzzy:1.4.0")
+            implementation("ca.solo-studios:kt-fuzzy:0.1.0")
+        }
     }
 }

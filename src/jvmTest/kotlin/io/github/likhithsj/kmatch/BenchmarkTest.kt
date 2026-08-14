@@ -107,6 +107,61 @@ class BenchmarkTest {
     }
 
     @Test
+    fun thirdPartyComparison() {
+        if (!enabled()) return
+        val rng = Random(5)
+        val pairs = (0 until 2000).map {
+            words(rng, 3 + rng.nextInt(3)).joinToString(" ") to words(rng, 3 + rng.nextInt(3)).joinToString(" ")
+        }
+        // Pairwise ratio: all three libraries. Scores are not directly
+        // comparable (me.xdrop rounds to Int and neither third-party library
+        // matches RapidFuzz bit-exactly); this measures throughput only.
+        bench("cmp ratio     kmatch  ") {
+            var acc = 0L
+            for ((x, y) in pairs) acc += Fuzz.ratio(x, y).toLong()
+            acc
+        }
+        bench("cmp ratio     me.xdrop") {
+            var acc = 0L
+            for ((x, y) in pairs) acc += me.xdrop.fuzzywuzzy.FuzzySearch.ratio(x, y).toLong()
+            acc
+        }
+        bench("cmp ratio     kt-fuzzy") {
+            var acc = 0L
+            // kt-fuzzy scores on a 0-1 scale; x100 keeps the checksum meaningful.
+            for ((x, y) in pairs) acc += (ca.solostudios.fuzzykt.FuzzyKt.ratio(x, y) * 100).toLong()
+            acc
+        }
+        bench("cmp partial   kmatch  ") {
+            var acc = 0L
+            for ((x, y) in pairs) acc += Fuzz.partialRatio(x, y).toLong()
+            acc
+        }
+        bench("cmp partial   me.xdrop") {
+            var acc = 0L
+            for ((x, y) in pairs) acc += me.xdrop.fuzzywuzzy.FuzzySearch.partialRatio(x, y).toLong()
+            acc
+        }
+        bench("cmp partial   kt-fuzzy") {
+            var acc = 0L
+            // kt-fuzzy scores on a 0-1 scale; x100 keeps the checksum meaningful.
+            for ((x, y) in pairs) acc += (ca.solostudios.fuzzykt.FuzzyKt.partialRatio(x, y) * 100).toLong()
+            acc
+        }
+
+        // extractOne with each library's default scorer (WRatio for both
+        // kmatch and me.xdrop; kt-fuzzy has no extraction API).
+        val choices = (0 until 20000).map { words(rng, 2 + rng.nextInt(4)).joinToString(" ") }
+        val query = choices[12345]
+        bench("cmp extractOne 20k kmatch  ") {
+            extractOne(query, choices)!!.index.toLong()
+        }
+        bench("cmp extractOne 20k me.xdrop") {
+            me.xdrop.fuzzywuzzy.FuzzySearch.extractOne(query, choices).index.toLong()
+        }
+    }
+
+    @Test
     fun partialRatioScan() {
         if (!enabled()) return
         val rng = Random(4)
