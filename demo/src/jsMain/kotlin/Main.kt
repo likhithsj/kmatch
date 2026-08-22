@@ -47,6 +47,7 @@ fun main() {
     val s1 = el("s1") as HTMLInputElement
     val s2 = el("s2") as HTMLInputElement
     val pre = el("pre") as HTMLInputElement
+    val foldBox = el("fold") as HTMLInputElement
     val table = el("score-table") as HTMLTableElement
     val query = el("query") as HTMLInputElement
     val scorerSel = el("scorer") as HTMLSelectElement
@@ -80,7 +81,22 @@ fun main() {
         vals[name] = tdVal
     }
 
-    fun processor(): ((String) -> String)? = if (pre.checked) ::defaultProcess else null
+    // NFD-decompose and drop combining marks: "São" -> "Sao". A custom
+    // processor like this is how diacritic-insensitive search composes with
+    // the parity core (which, matching RapidFuzz, never folds on its own).
+    fun foldDiacritics(s: String): String =
+        (s.asDynamic().normalize("NFD") as String).replace(Regex("[\\u0300-\\u036F]"), "")
+
+    fun processor(): ((String) -> String)? {
+        val fold = foldBox.checked
+        val prep = pre.checked
+        return when {
+            fold && prep -> { s -> defaultProcess(foldDiacritics(s)) }
+            fold -> ::foldDiacritics
+            prep -> ::defaultProcess
+            else -> null
+        }
+    }
 
     fun renderPairwise() {
         val p = processor()
@@ -141,7 +157,7 @@ fun main() {
         renderExtraction()
     }
 
-    for (input in listOf(s1, s2, pre, query, cutoff)) {
+    for (input in listOf(s1, s2, pre, foldBox, query, cutoff)) {
         input.addEventListener("input", { renderAll() })
     }
     choices.addEventListener("input", { renderExtraction() })
