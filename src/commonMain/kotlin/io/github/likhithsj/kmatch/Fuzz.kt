@@ -236,6 +236,10 @@ private fun partialRatioImpl(
 }
 
 internal fun partialRatioCps(a: IntArray, b: IntArray, scoreCutoffIn: Double): Double {
+    // RapidFuzz's C++ backend guards every scorer with early-exit paths:
+    // a cutoff above 100 can never be met, and the early returns below
+    // would otherwise bypass it.
+    if (scoreCutoffIn > 100.0) return 0.0
     var scoreCutoff = scoreCutoffIn
     if (a.isEmpty() && b.isEmpty()) return 100.0
 
@@ -265,6 +269,10 @@ internal fun partialRatioCpsCached(
     c: IntArray,
     scoreCutoffIn: Double,
 ): Double {
+    // RapidFuzz's C++ backend guards every scorer with early-exit paths:
+    // a cutoff above 100 can never be met, and the early returns below
+    // would otherwise bypass it.
+    if (scoreCutoffIn > 100.0) return 0.0
     if (q.isEmpty() && c.isEmpty()) return 100.0
     if (q.size > c.size) return partialRatioCps(q, c, scoreCutoffIn)
 
@@ -337,6 +345,10 @@ internal fun tokenSortRatioCps(a: IntArray, b: IntArray, scoreCutoff: Double): D
     ratioCps(sortJoin(splitTokens(a)), sortJoin(splitTokens(b)), scoreCutoff)
 
 internal fun tokenSetRatioCps(a: IntArray, b: IntArray, scoreCutoff: Double): Double {
+    // RapidFuzz's C++ backend guards every scorer with early-exit paths:
+    // a cutoff above 100 can never be met, and the early returns below
+    // would otherwise bypass it.
+    if (scoreCutoff > 100.0) return 0.0
     val tokensA = splitTokens(a).toSet()
     val tokensB = splitTokens(b).toSet()
 
@@ -386,6 +398,10 @@ internal fun partialTokenSortRatioCps(a: IntArray, b: IntArray, scoreCutoff: Dou
     partialRatioCps(sortJoin(splitTokens(a)), sortJoin(splitTokens(b)), scoreCutoff)
 
 internal fun partialTokenSetRatioCps(a: IntArray, b: IntArray, scoreCutoff: Double): Double {
+    // RapidFuzz's C++ backend guards every scorer with early-exit paths:
+    // a cutoff above 100 can never be met, and the early returns below
+    // would otherwise bypass it.
+    if (scoreCutoff > 100.0) return 0.0
     val tokensA = splitTokens(a).toSet()
     val tokensB = splitTokens(b).toSet()
 
@@ -399,6 +415,10 @@ internal fun partialTokenSetRatioCps(a: IntArray, b: IntArray, scoreCutoff: Doub
 }
 
 internal fun partialTokenRatioCps(a: IntArray, b: IntArray, scoreCutoffIn: Double): Double {
+    // RapidFuzz's C++ backend guards every scorer with early-exit paths:
+    // a cutoff above 100 can never be met, and the early returns below
+    // would otherwise bypass it.
+    if (scoreCutoffIn > 100.0) return 0.0
     var scoreCutoff = scoreCutoffIn
     val tokensSplitA = splitTokens(a)
     val tokensSplitB = splitTokens(b)
@@ -423,6 +443,10 @@ internal fun partialTokenRatioCps(a: IntArray, b: IntArray, scoreCutoffIn: Doubl
 }
 
 internal fun weightedRatioCps(a: IntArray, b: IntArray, scoreCutoffIn: Double): Double {
+    // RapidFuzz's C++ backend guards every scorer with early-exit paths:
+    // a cutoff above 100 can never be met, and the early returns below
+    // would otherwise bypass it.
+    if (scoreCutoffIn > 100.0) return 0.0
     val UNBASE_SCALE = 0.95
 
     // FuzzyWuzzy compatibility: empty strings score 0.

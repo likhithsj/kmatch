@@ -140,6 +140,26 @@ PROCESS_INPUTS: list[str] = [
     "'quotes' \"and\" $dollars$ 100%",
 ]
 
+# Cutoff coverage: scorers must honor score_cutoff through every early-exit
+# and internal-chaining path. Includes cutoffs just under and over raw
+# scores, cutoffs in (95, 100] that WRatio's /0.95 chaining pushes above 100
+# internally, and outright > 100 cutoffs where the C++ backend returns 0
+# no matter the raw score. This class of case is what catches a cutoff
+# bypass in an early `return 100` branch.
+CUTOFF_PAIRS: list[tuple[str, str]] = [
+    ("hello world", "hello world xy"),  # WRatio 95.0 via token-subset path
+    ("a b", "a b c"),  # token_set subset early-return 100
+    ("this is a test", "this is a test!"),
+    ("", ""),
+    ("", "abc"),
+    ("cat", "the cat sat on the mat"),  # 1.5 <= len ratio <= 8
+    ("ab", "the quick brown fox jumps over the lazy dog and keeps running"),  # > 8
+    ("fuzzy wuzzy was a bear", "wuzzy fuzzy was a bear"),
+    ("\U0001F600\U0001F603\U0001F604", "\U0001F600\U0001F604\U0001F603"),
+    ("stra\u00dfe", "STRASSE"),
+]
+CUTOFFS = [0.0, 30.0, 70.0, 90.0, 95.5, 96.0, 99.0, 100.0, 150.0]
+
 SCORERS = [
     "ratio",
     "partial_ratio",
@@ -200,6 +220,19 @@ def main() -> None:
                     f'"{name}", {str(processed).lower()}, {expected!r})'
                 )
 
+    cutoff_cases: list[str] = []
+    for s1, s2 in CUTOFF_PAIRS:
+        for name in SCORERS:
+            fn = scorer_fns[name]
+            for processed in (False, True):
+                processor = utils.default_process if processed else None
+                for cutoff in CUTOFFS:
+                    expected = fn(s1, s2, processor=processor, score_cutoff=cutoff)
+                    cutoff_cases.append(
+                        f'CutoffCase("{kt_escape(s1)}", "{kt_escape(s2)}", '
+                        f'"{name}", {str(processed).lower()}, {cutoff!r}, {expected!r})'
+                    )
+
     process_cases = [
         f'ProcessCase("{kt_escape(s)}", "{kt_escape(utils.default_process(s))}")'
         for s in PROCESS_INPUTS
@@ -216,13 +249,24 @@ def main() -> None:
         )
         add_alls.append(f"    addAll(goldenCases{n}())")
 
+    cutoff_chunk_fns = []
+    cutoff_add_alls = []
+    for i in range(0, len(cutoff_cases), chunk):
+        n = i // chunk
+        body = ",\n    ".join(cutoff_cases[i : i + chunk])
+        cutoff_chunk_fns.append(
+            f"private fun cutoffCases{n}(): List<CutoffCase> = listOf(\n    {body},\n)\n"
+        )
+        cutoff_add_alls.append(f"    addAll(cutoffCases{n}())")
+
     process_body = ",\n    ".join(process_cases)
 
     OUT.write_text(
         f"""\
 // GENERATED FILE -- DO NOT EDIT.
 // Produced by tools/generate_vectors.py against rapidfuzz=={PIN}.
-// {len(cases)} scorer cases over {len(PAIRS)} string pairs, plus
+// {len(cases)} scorer cases over {len(PAIRS)} string pairs,
+// {len(cutoff_cases)} score_cutoff cases over {len(CUTOFF_PAIRS)} pairs, plus
 // {len(process_cases)} defaultProcess cases. CI regenerates this file and
 // fails on drift.
 package io.github.likhithsj.kmatch
@@ -235,6 +279,15 @@ internal class GoldenCase(
     val expected: Double,
 )
 
+internal class CutoffCase(
+    val s1: String,
+    val s2: String,
+    val scorer: String,
+    val processed: Boolean,
+    val cutoff: Double,
+    val expected: Double,
+)
+
 internal class ProcessCase(val input: String, val expected: String)
 
 {"".join(chunk_fns)}
@@ -242,12 +295,17 @@ internal val GOLDEN_CASES: List<GoldenCase> = buildList {{
 {chr(10).join(add_alls)}
 }}
 
+{"".join(cutoff_chunk_fns)}
+internal val CUTOFF_CASES: List<CutoffCase> = buildList {{
+{chr(10).join(cutoff_add_alls)}
+}}
+
 internal val PROCESS_CASES: List<ProcessCase> = listOf(
     {process_body},
 )
 """
     )
-    print(f"wrote {OUT} ({len(cases)} cases, {len(process_cases)} process cases)")
+    print(f"wrote {OUT} ({len(cases)} cases, {len(cutoff_cases)} cutoff cases, {len(process_cases)} process cases)")
 
 
 if __name__ == "__main__":

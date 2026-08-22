@@ -60,6 +60,29 @@ class DedupeTest {
     }
 
     @Test
+    fun keysMatchingNothingSurviveInsteadOfCrashing() {
+        // An empty key scores 0 against everything under TokenSetRatio --
+        // including itself -- so it can never join a group. It must come
+        // through as its own entry, not crash the scan (regression: this
+        // used to throw IndexOutOfBoundsException).
+        assertEquals(listOf("", "a b"), dedupe(listOf("", "a b")))
+        assertEquals(listOf("!!!", "hello"), dedupe(listOf("!!!", "hello"), processor = ::defaultProcess))
+        assertEquals(listOf(""), dedupe(listOf("", "")).distinct())
+    }
+
+    @Test
+    fun tieBreakUsesCodePointOrder() {
+        // Both keys are one code point + "x" and mutual duplicates under a
+        // permissive threshold. U+1F600 (astral) sorts AFTER U+FF01 in code
+        // points, though BEFORE it in raw UTF-16 comparison -- Python/
+        // fuzzywuzzy semantics require the code-point order winner.
+        val a = "😀x" // 😀x
+        val b = "！x"       // ！x
+        val result = dedupe(listOf(a, b), threshold = 0.0, scorer = Scorers.Ratio)
+        assertEquals(listOf(b), result)
+    }
+
+    @Test
     fun singleAndEmptyInput() {
         assertEquals(emptyList(), dedupe(emptyList<String>()))
         assertEquals(listOf("x"), dedupe(listOf("x")))

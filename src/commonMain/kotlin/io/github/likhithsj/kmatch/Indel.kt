@@ -178,7 +178,9 @@ internal fun indelDistance(a: IntArray, b: IntArray, scoreCutoff: Int? = null): 
  */
 internal fun indelNormalizedSimilarity(a: IntArray, b: IntArray, scoreCutoff: Double? = null): Double {
     val lensum = a.size + b.size
-    if (lensum == 0) return 1.0
+    // Two empties are perfectly similar -- but the cutoff still applies
+    // (RapidFuzz returns 0 for score_cutoff > 1 even here).
+    if (lensum == 0) return if (scoreCutoff == null || 1.0 >= scoreCutoff) 1.0 else 0.0
     // normSim <= 1 - |len(a) - len(b)| / lensum; skip the LCS when even that
     // upper bound misses the cutoff. The bound uses the same arithmetic shape
     // as the exact score, so boundary cases agree with the full computation.
@@ -201,7 +203,7 @@ internal fun indelNormalizedSimilarity(
 ): Double {
     val textLen = to - from
     val lensum = pattern.length + textLen
-    if (lensum == 0) return 1.0
+    if (lensum == 0) return if (scoreCutoff == null || 1.0 >= scoreCutoff) 1.0 else 0.0
     if (scoreCutoff != null && 1.0 - abs(pattern.length - textLen).toDouble() / lensum < scoreCutoff) return 0.0
     val normSim = 1.0 - (lensum - 2 * pattern.lcs(text, from, to)).toDouble() / lensum
     return if (scoreCutoff == null || normSim >= scoreCutoff) normSim else 0.0
