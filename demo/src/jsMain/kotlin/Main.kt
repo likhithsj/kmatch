@@ -93,9 +93,13 @@ fun main() {
         'ð' to "d", 'Ð' to "D", 'þ' to "th", 'Þ' to "TH",
         'ħ' to "h", 'Ħ' to "H", 'ŧ' to "t", 'Ŧ' to "T", 'ı' to "i",
     )
+    // NFKD also folds compatibility forms (full-width Ｔｏｋｙｏ -> Tokyo).
+    // Marks stripped: Latin/Greek/Cyrillic combining accents, Hebrew points
+    // and cantillation, Arabic harakat -- scripts where marks are optional
+    // vocalization. Indic scripts are left alone: their marks ARE the vowels.
     fun foldDiacritics(s: String): String {
-        val stripped = (s.asDynamic().normalize("NFD") as String)
-            .replace(Regex("[\\u0300-\\u036F]"), "")
+        val stripped = (s.asDynamic().normalize("NFKD") as String)
+            .replace(Regex("[\\u0300-\\u036F\\u0591-\\u05C7\\u064B-\\u065F\\u0670]"), "")
         if (stripped.none { it in nonDecomposable }) return stripped
         return buildString(stripped.length) {
             for (ch in stripped) append(nonDecomposable[ch] ?: ch.toString())
