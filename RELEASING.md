@@ -38,7 +38,7 @@ secret*, four of them:
 ### 4. Activate the workflows
 
 `tools/release-workflow.yml` → `.github/workflows/release.yml` and
-`tools/docs-workflow.yml` → `.github/workflows/docs.yml` (move via the GitHub
+`tools/docs-workflow.yml` → `.github/workflows/docs.yml` — this one also publishes the browser playground at likhithsj.github.io/kmatch (move via the GitHub
 web UI: open the file → edit → rewrite the path — same as ci.yml was).
 For docs, also set Settings → Pages → Source to **GitHub Actions**.
 

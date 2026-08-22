@@ -10,6 +10,10 @@ Fast, RapidFuzz-compatible fuzzy string matching for Kotlin Multiplatform.
 
 > Status: pre-release (`0.3.0-SNAPSHOT`). The parity core, the bit-parallel performance core, and the full extraction API are complete and verified; first Maven Central release is upcoming.
 
+## Try it
+
+**[Live playground →](https://likhithsj.github.io/kmatch/)** — compare strings across every scorer and search a collection with match highlighting, running the real library as Kotlin/JS in your browser. (Goes live once GitHub Pages is enabled; see `RELEASING.md`. Source in [`demo/`](demo/).)
+
 ## Install
 
 ```kotlin

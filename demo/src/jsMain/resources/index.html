@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>kmatch playground</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --bg: #FAFAFC;
+    --surface: #FFFFFF;
+    --ink: #1C1B22;
+    --muted: #6E6A7A;
+    --line: #E4E2EC;
+    --accent: #6B57F0;
+    --accent-soft: #EFECFE;
+    --mark-bg: #FFDF80;
+    --mark-ink: #4A3A00;
+    --sans: "IBM Plex Sans", system-ui, -apple-system, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #17161C;
+      --surface: #201F27;
+      --ink: #ECEAF2;
+      --muted: #97929F;
+      --line: #34323E;
+      --accent: #8F7BFF;
+      --accent-soft: #2B2647;
+      --mark-bg: #5C4A12;
+      --mark-ink: #FFE9A8;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #17161C;
+    --surface: #201F27;
+    --ink: #ECEAF2;
+    --muted: #97929F;
+    --line: #34323E;
+    --accent: #8F7BFF;
+    --accent-soft: #2B2647;
+    --mark-bg: #5C4A12;
+    --mark-ink: #FFE9A8;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.5;
+  }
+  main { max-width: 880px; margin: 0 auto; padding: 28px 20px 64px; display: flex; flex-direction: column; gap: 24px; }
+
+  header { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+  header h1 { font-size: 22px; font-weight: 600; margin: 0; letter-spacing: -0.01em; }
+  header h1 .k { color: var(--accent); }
+  header p { margin: 0; color: var(--muted); flex: 1 1 240px; }
+  header nav { display: flex; gap: 14px; font-size: 13.5px; }
+  header a { color: var(--accent); text-decoration: none; }
+  header a:hover, header a:focus-visible { text-decoration: underline; }
+
+  section {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 20px;
+    display: flex; flex-direction: column; gap: 14px;
+  }
+  section > h2 { margin: 0; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+
+  .row { display: flex; gap: 12px; flex-wrap: wrap; }
+  .field { display: flex; flex-direction: column; gap: 5px; flex: 1 1 200px; }
+  .field.narrow { flex: 0 1 130px; }
+  label { font-size: 12.5px; color: var(--muted); }
+  input[type="text"], textarea, select {
+    font-family: var(--mono); font-size: 14px;
+    color: var(--ink); background: var(--bg);
+    border: 1px solid var(--line); border-radius: 7px;
+    padding: 8px 10px; width: 100%;
+  }
+  input[type="text"]:focus-visible, textarea:focus-visible, select:focus-visible, input[type="checkbox"]:focus-visible {
+    outline: 2px solid var(--accent); outline-offset: 1px;
+  }
+  textarea { resize: vertical; min-height: 220px; }
+  .check { display: flex; align-items: center; gap: 7px; font-size: 13.5px; color: var(--muted); align-self: flex-end; padding-bottom: 8px; }
+  .check input { accent-color: var(--accent); width: 15px; height: 15px; }
+
+  table { border-collapse: collapse; width: 100%; }
+  td { padding: 5px 8px 5px 0; border-bottom: 1px solid var(--line); }
+  tr:last-child td { border-bottom: none; }
+  td.name { font-family: var(--mono); font-size: 13.5px; width: 1%; white-space: nowrap; padding-right: 18px; }
+  td.bar-cell { width: 99%; }
+  .bar { height: 8px; border-radius: 4px; background: var(--accent-soft); overflow: hidden; }
+  .bar > i { display: block; height: 100%; background: var(--accent); border-radius: 4px; transition: width 120ms ease; }
+  @media (prefers-reduced-motion: reduce) { .bar > i { transition: none; } }
+  td.val { font-family: var(--mono); font-variant-numeric: tabular-nums; text-align: right; width: 1%; white-space: nowrap; padding-left: 14px; }
+
+  .split { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 640px) { .split { grid-template-columns: 1fr; } }
+
+  #results { display: flex; flex-direction: column; gap: 6px; min-height: 220px; }
+  .hit {
+    display: flex; align-items: center; gap: 10px;
+    padding: 7px 10px; border: 1px solid var(--line); border-radius: 7px;
+    font-family: var(--mono); font-size: 14px;
+    overflow-wrap: anywhere;
+  }
+  .hit .score {
+    font-variant-numeric: tabular-nums; font-size: 12.5px;
+    color: var(--accent); background: var(--accent-soft);
+    border-radius: 5px; padding: 1px 7px; flex: none;
+  }
+  .hit mark { background: var(--mark-bg); color: var(--mark-ink); border-radius: 2px; padding: 0 1px; }
+  .empty { color: var(--muted); font-size: 13.5px; padding: 6px 2px; }
+
+  footer { color: var(--muted); font-size: 12.5px; text-align: center; }
+  footer a { color: var(--accent); text-decoration: none; }
+  footer a:hover, footer a:focus-visible { text-decoration: underline; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1><span class="k">k</span>match</h1>
+    <p>RapidFuzz-compatible fuzzy matching, running as Kotlin/JS in your browser.</p>
+    <nav>
+      <a href="https://github.com/likhithsj/kmatch">GitHub</a>
+      <a href="api/">API docs</a>
+    </nav>
+  </header>
+
+  <section aria-labelledby="pairwise-h">
+    <h2 id="pairwise-h">Compare two strings</h2>
+    <div class="row">
+      <div class="field">
+        <label for="s1">String 1</label>
+        <input type="text" id="s1" value="fuzzy wuzzy was a bear" autocomplete="off" spellcheck="false">
+      </div>
+      <div class="field">
+        <label for="s2">String 2</label>
+        <input type="text" id="s2" value="wuzzy fuzzy was a bear" autocomplete="off" spellcheck="false">
+      </div>
+      <label class="check"><input type="checkbox" id="pre" checked> defaultProcess</label>
+    </div>
+    <table id="score-table" aria-label="Scores per scorer"></table>
+  </section>
+
+  <section aria-labelledby="extract-h">
+    <h2 id="extract-h">Search a collection</h2>
+    <div class="row">
+      <div class="field">
+        <label for="query">Query</label>
+        <input type="text" id="query" value="sao paolo" autocomplete="off" spellcheck="false">
+      </div>
+      <div class="field narrow">
+        <label for="scorer">Scorer</label>
+        <select id="scorer"></select>
+      </div>
+      <div class="field narrow">
+        <label for="cutoff">Score cutoff</label>
+        <input type="text" id="cutoff" value="40" inputmode="numeric" autocomplete="off">
+      </div>
+    </div>
+    <div class="split">
+      <div class="field">
+        <label for="choices">Choices (one per line)</label>
+        <textarea id="choices" spellcheck="false">New York
+Newark
+São Paulo
+San Francisco
+Zürich
+Tokyo 東京
+Kyoto 京都
+Reykjavík
+Córdoba
+Montréal
+Saint Petersburg
+Санкт-Петербург
+Mexico City
+Ciudad de México
+Cape Town
+München
+Munich
+Nairobi 🦁
+Wellington
+Buenos Aires</textarea>
+      </div>
+      <div class="field">
+        <label id="results-label" for="results">Matches</label>
+        <div id="results" aria-labelledby="results-label" aria-live="polite"></div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    Every score here is bit-exact with Python's RapidFuzz &mdash; verified by 1,460 golden vectors on every commit.
+    <a href="https://github.com/likhithsj/kmatch">io.github.likhithsj:kmatch</a>
+  </footer>
+</main>
+<script src="demo.js"></script>
+</body>
+</html>

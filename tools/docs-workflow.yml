@@ -2,7 +2,9 @@
 # (GitHub blocks workflow files from being pushed by this repo's automation
 # credentials; move it via the GitHub web UI like ci.yml was.)
 #
-# Publishes the Dokka API docs to GitHub Pages on every push to main.
+# Publishes the site to GitHub Pages on every push to main:
+#   /     -> browser playground (demo module, Kotlin/JS)
+#   /api  -> Dokka API docs
 # One-time setup: Settings -> Pages -> Source: "GitHub Actions".
 name: Docs
 
@@ -30,10 +32,16 @@ jobs:
           distribution: temurin
           java-version: 21
       - uses: gradle/actions/setup-gradle@v4
-      - run: ./gradlew dokkaGenerate --stacktrace
+      - run: ./gradlew :demo:jsBrowserDistribution dokkaGenerate --stacktrace
+      - name: Assemble site
+        run: |
+          mkdir -p site/api
+          cp -r demo/build/dist/js/productionExecutable/. site/
+          rm -f site/demo.js.map
+          cp -r build/dokka/html/. site/api/
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: build/dokka/html
+          path: site
 
   deploy:
     needs: build
