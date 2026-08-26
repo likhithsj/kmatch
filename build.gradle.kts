@@ -28,7 +28,16 @@ dokka {
 kotlin {
     explicitApi()
 
-    jvm()
+    jvm {
+        compilerOptions {
+            // Libraries target the oldest practical bytecode so any consumer
+            // JVM can load them; building on a newer JDK must not leak newer
+            // class-file versions (0.3.0 shipped Java 21 bytecode by accident).
+            // -Xjdk-release also pins the JDK API surface to 1.8.
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_1_8)
+            freeCompilerArgs.add("-Xjdk-release=1.8")
+        }
+    }
 
     js {
         nodejs()
