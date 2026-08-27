@@ -1,0 +1,26 @@
+# Move this file to .github/workflows/skie-sample.yml to activate.
+# (GitHub blocks workflow files from being pushed by this repo's automation
+# credentials; move it via the GitHub web UI like the others.)
+#
+# Verifies Swift/SKIE compatibility: builds samples/ios-skie against the
+# published kmatch artifact from Maven Central with the SKIE plugin, then
+# compiles and runs Swift assertions against the generated framework.
+name: SKIE sample
+
+on:
+  workflow_dispatch:
+  push:
+    paths: ["samples/ios-skie/**"]
+
+jobs:
+  verify:
+    name: Swift/SKIE verification
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@v4
+      - run: bash samples/ios-skie/verify.sh
