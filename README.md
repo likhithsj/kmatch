@@ -1,25 +1,28 @@
 # kmatch
 
+[![Maven Central](https://img.shields.io/maven-central/v/io.github.likhithsj/kmatch)](https://central.sonatype.com/artifact/io.github.likhithsj/kmatch)
+[![CI](https://github.com/likhithsj/kmatch/actions/workflows/ci.yml/badge.svg)](https://github.com/likhithsj/kmatch/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 Fast, RapidFuzz-compatible fuzzy string matching for Kotlin Multiplatform.
 
-- **Verified parity** — bit-exact with [RapidFuzz](https://github.com/rapidfuzz/RapidFuzz), checked against 1,460 golden vectors on every commit. Tune thresholds in a Python notebook, ship the numbers to Kotlin unchanged.
+- **Verified parity** — bit-exact with [RapidFuzz](https://github.com/rapidfuzz/RapidFuzz), checked against 3,260 golden vectors (scores and `scoreCutoff` behavior) on every commit. Tune thresholds in a Python notebook, ship the numbers to Kotlin unchanged.
 - **Bit-parallel core** — Hyyrö's bit-parallel LCS packs the DP column into machine words; extraction scans reuse the query's match masks across the whole collection and short-circuit on `scoreCutoff`.
 - **Correct on full Unicode** — all algorithms operate on code points, never UTF-16 chars. A single emoji is one symbol, astral-plane characters sort correctly, and `defaultProcess` uses the exact Unicode tables of RapidFuzz's C++ backend.
 - **Every KMP target** — JVM (serves Android), JS, Wasm, iOS (including `iosX64`), macOS, watchOS, tvOS, Linux, Windows, Android Native.
 - **Zero runtime dependencies**, MIT licensed.
 
-> Status: pre-release (`0.3.0-SNAPSHOT`). The parity core, the bit-parallel performance core, and the full extraction API are complete and verified; first Maven Central release is upcoming.
-
 ## Try it
 
-**[Live playground →](https://likhithsj.github.io/kmatch/)** — compare strings across every scorer and search a collection with match highlighting, running the real library as Kotlin/JS in your browser. (Goes live once GitHub Pages is enabled; see `RELEASING.md`. Source in [`demo/`](demo/).)
+**[Live playground →](https://likhithsj.github.io/kmatch/)** — compare strings across every scorer and search a collection with match highlighting, running the real library as Kotlin/JS in your browser. **[API docs →](https://likhithsj.github.io/kmatch/api/)** (Source in [`demo/`](demo/).)
 
 ## Install
 
 ```kotlin
-// Not yet on Maven Central -- coordinates reserved for the first release:
-implementation("io.github.likhithsj:kmatch:0.3.0")
+implementation("io.github.likhithsj:kmatch:0.3.1")
 ```
+
+One dependency line, every target: JVM/Android, iOS (device + both simulators), macOS, watchOS, tvOS, JS, Wasm, Linux, Windows, Android Native — Gradle selects the right artifact automatically. The JVM artifact targets Java 8 bytecode, so it runs on any JVM from 8 up. Consuming from Swift? See the [SKIE sample](samples/ios-skie/).
 
 ## Scorers
 
@@ -92,7 +95,7 @@ matchingBlocks("kitten", "sitting")                // aligned blocks in both str
 
 ## How parity is verified
 
-`tools/generate_vectors.py` pins RapidFuzz 3.14.5 and emits `GoldenVectors.kt` — 1,460 (inputs, scorer, expected score) cases covering plain ASCII, accented Latin, astral-plane characters, empty strings, strings past 64 code points, token edge cases, and non-Latin scripts through `defaultProcess`. CI asserts **exact** float64 equality on every tested target and regenerates the vectors to catch drift.
+`tools/generate_vectors.py` pins RapidFuzz 3.14.5 and emits `GoldenVectors.kt` — 3,260 (inputs, scorer, expected score) cases covering plain ASCII, accented Latin, astral-plane characters, empty strings, strings past 64 code points, token edge cases, and non-Latin scripts through `defaultProcess`. CI asserts **exact** float64 equality on every tested target and regenerates the vectors to catch drift.
 
 `defaultProcess` and tokenization use Unicode tables probed directly from RapidFuzz's C++ backend (`tools/generate_unicode_tables.py`) rather than any host platform's Unicode APIs — the backends genuinely differ from both Python's `re` module and Java's `Character` (underscore handling, NBSP tokenization, simple vs. full case mapping), and the probe-derived tables make kmatch match what RapidFuzz users actually observe.
 
@@ -125,10 +128,9 @@ Throughput comparison only — output scales and rounding differ between librari
 
 ## Roadmap
 
-- **0.1.0** — Parity core (code-point DP), string extraction, golden vectors on all targets, first Maven Central release.
-- **0.2.0** — Hyyrö bit-parallel edit distance, mask reuse across extraction scans, and cutoff short-circuiting behind the unchanged API. ✅ implemented
-- **0.3.0** — Generic extraction over `T` with `keySelector`, `dedupe`, `matchingRanges`; benchmarks vs other Kotlin fuzzy-matching libraries. ✅ implemented
-- **1.0.0** — API freeze, documentation site, Wasm demo.
+- ✅ **0.1.0–0.3.0** (released) — parity core, bit-parallel performance core, generic extraction, `dedupe`, `matchingRanges`, published benchmarks, playground, API docs.
+- **0.3.1** (current) — JVM artifact targets Java 8 bytecode, so it loads on any JVM from 8 up.
+- **1.0.0** — API freeze after early-adopter feedback. Candidates being weighed: a public prepared-query (`CachedScorer`) API, ready-made accent-folding processors (`searchFold`), lazy `Sequence` extraction.
 
 ## License
 
