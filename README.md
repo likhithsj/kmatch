@@ -12,6 +12,8 @@ Fast, RapidFuzz-compatible fuzzy string matching for Kotlin Multiplatform.
 - **Every KMP target** — JVM (serves Android), JS, Wasm, iOS (including `iosX64`), macOS, watchOS, tvOS, Linux, Windows, Android Native.
 - **Zero runtime dependencies**, MIT licensed.
 
+> **Name note:** several unrelated projects are also called "kmatch"/"KMatcher" (including a Kotlin pattern-matching DSL). This library is fuzzy *string* matching, has no DSL, and lives at the Maven coordinate `io.github.likhithsj:kmatch` — when in doubt, that coordinate is the identity.
+
 ## Try it
 
 **[Live playground →](https://likhithsj.github.io/kmatch/)** — compare strings across every scorer and search a collection with match highlighting, running the real library as Kotlin/JS in your browser. **[API docs →](https://likhithsj.github.io/kmatch/api/)** (Source in [`demo/`](demo/).)
