@@ -38,9 +38,14 @@ if let best = ExtractKt.extractOne(query: "new york jets", choices: choices, sco
     failures += 1
 }
 
-// 4. A custom Scorer supplied as a Swift closure (fun interface via SKIE).
-let exact = Scorer { a, b, _ in a == b ? 100.0 : 0.0 }
-if let hit = ExtractKt.extractOne(query: "New York Jets", choices: choices, scorer: exact, processor: nil, scoreCutoff: nil) {
+// 4. A custom Scorer implemented in Swift (conforming class -- the Kotlin
+// fun interface surfaces as an ordinary Swift protocol).
+class ExactScorer: Scorer {
+    func score(s1: String, s2: String, scoreCutoff: KotlinDouble?) -> Double {
+        s1 == s2 ? 100.0 : 0.0
+    }
+}
+if let hit = ExtractKt.extractOne(query: "New York Jets", choices: choices, scorer: ExactScorer(), processor: nil, scoreCutoff: nil) {
     check("customScorer.score", hit.score, 100.0)
 } else {
     print("FAIL  custom scorer returned nil")
