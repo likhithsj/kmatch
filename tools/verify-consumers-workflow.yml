@@ -1,0 +1,102 @@
+# Move this file to .github/workflows/verify-consumers.yml to activate.
+# (GitHub blocks workflow files from being pushed by this repo's automation
+# credentials; move it via the GitHub web UI like the others.)
+#
+# Consumer verification matrix: every job depends on the PUBLISHED kmatch
+# from Maven Central (samples/consumer-check*, never the repo sources) and
+# runs golden-value assertions on every environment CI hardware can execute,
+# compiling the remainder. A green run of this workflow is the adoption
+# proof summarized in VERIFICATION.md.
+name: Verify consumers
+
+on:
+  workflow_dispatch:
+  push:
+    paths: ["samples/consumer-check/**", "samples/consumer-check-android/**"]
+
+jobs:
+  linux:
+    name: JVM + Node JS + Wasm + Linux native (execute)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Run consumer tests (jvm, js, wasm, linuxX64)
+        run: ../../gradlew -p . jvmTest jsNodeTest wasmJsNodeTest linuxX64Test --stacktrace
+        working-directory: samples/consumer-check
+      - name: Compile-proof targets (linuxArm64, androidNativeArm64)
+        run: ../../gradlew -p . compileKotlinLinuxArm64 compileKotlinAndroidNativeArm64 --stacktrace
+        working-directory: samples/consumer-check
+
+  jvm-runtimes:
+    name: JVM runtimes 8 / 11 / 17 (execute)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: |
+            8
+            11
+            17
+            21
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Tests on Java 8 runtime
+        run: ../../gradlew -p . jvmTest -PtestJdk=8 --rerun-tasks --stacktrace
+        working-directory: samples/consumer-check
+      - name: Tests on Java 11 runtime
+        run: ../../gradlew -p . jvmTest -PtestJdk=11 --rerun-tasks --stacktrace
+        working-directory: samples/consumer-check
+      - name: Tests on Java 17 runtime
+        run: ../../gradlew -p . jvmTest -PtestJdk=17 --rerun-tasks --stacktrace
+        working-directory: samples/consumer-check
+
+  android:
+    name: Android (AGP library) unit tests (execute)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Build and unit-test the Android consumer module
+        run: ../../gradlew -p . testDebugUnitTest --stacktrace
+        working-directory: samples/consumer-check-android
+
+  apple:
+    name: macOS + iOS/watchOS/tvOS simulators (execute)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Run consumer tests on Apple simulators + macOS
+        run: ../../gradlew -p . macosArm64Test iosSimulatorArm64Test watchosSimulatorArm64Test tvosSimulatorArm64Test --stacktrace
+        working-directory: samples/consumer-check
+      - name: Compile-proof targets (iosArm64 device, iosX64)
+        run: ../../gradlew -p . compileKotlinIosArm64 compileKotlinIosX64 --stacktrace
+        working-directory: samples/consumer-check
+
+  windows:
+    name: Windows native (execute)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Run consumer tests on Windows (mingwX64)
+        run: ..\..\gradlew.bat -p . mingwX64Test --stacktrace
+        working-directory: samples/consumer-check
