@@ -26,6 +26,7 @@ val menu = MenuCategory(
                 MenuItem("3", "Cappuccino", listOf("foam", "cappucino")),
                 MenuItem("4", "Caramel Macchiato", listOf("caramel", "vanilla")),
                 MenuItem("5", "Espresso", listOf("shot", "doppio")),
+                MenuItem("11", "Caffè Mocha", listOf("mocha", "chocolate")),
             ),
         ),
         MenuCategory(
@@ -43,8 +44,46 @@ val menu = MenuCategory(
                 MenuItem("10", "Chocolate Croissant", listOf("pastry", "chocolate")),
             ),
         ),
+        // Seasonal category: last in the tree on purpose, so on a raw-score
+        // TIE the regular item (earlier input order) wins -- which makes the
+        // effect of the boost below unmistakable.
+        //
+        // Keyword-design note #2 (discovered by this very demo): keep
+        // keyword lists SHORT. A long list once pushed "Peppermint Mocha"'s
+        // searchable text past 8x the length of the query "mocha", tripping
+        // WRatio's length-ratio cliff (scale 0.9 -> 0.6) and dropping its
+        // score from 90 to 60.
+        MenuCategory(
+            "Holiday Drinks",
+            items = listOf(
+                MenuItem("12", "Peppermint Mocha", listOf("mocha", "mint")),
+                MenuItem("13", "Gingerbread Latte", listOf("gingerbread", "holiday")),
+            ),
+        ),
     ),
 )
+
+// --- Holiday boost (see docs/learn/07-categories-and-priorities.md) --------
+
+/** item id -> category name, built once from the tree. */
+val categoryOf: Map<String, String> =
+    menu.children.flatMap { cat -> cat.allItems().map { it.id to cat.name } }.toMap()
+
+/** Business priority per category. In a real app this comes from config and
+ *  the calendar (holiday boost active only in season). */
+fun boostFor(category: String): Double = when (category) {
+    "Holiday Drinks" -> 1.0
+    "Hot Coffee", "Cold Drinks" -> 0.95
+    else -> 0.92
+}
+
+/** kmatch answers "how well does the text match"; this one sort applies the
+ *  business priority on top. */
+fun boostedSearch(engine: MenuSearch, query: String, limit: Int = 3) =
+    engine.search(query, limit = 10)
+        .map { it to it.score * boostFor(categoryOf.getValue(it.item.id)) }
+        .sortedByDescending { it.second }
+        .take(limit)
 
 fun naiveSearch(query: String, items: List<MenuItem>): String =
     items.firstOrNull { query.lowercase() in it.name.lowercase() }?.name ?: "—"
@@ -74,4 +113,24 @@ fun main() {
     }
     println()
     println("kmatch entry point: extractTop(query, items, keySelector = { name + keywords }, processor = ::searchFold, scoreCutoff = 55.0)")
+
+    // --- PART 2: holiday boost ---------------------------------------------
+    println()
+    println("PART 2 — category priority: Holiday Drinks boosted over regular drinks")
+    println()
+    for (q in listOf("mocha", "latte")) {
+        val raw = engine.search(q, limit = 3)
+        val boosted = boostedSearch(engine, q)
+        println("query \"$q\"")
+        println("  %-34s | %s".format("RAW text score (kmatch alone)", "WITH holiday boost (score × weight)"))
+        for (i in 0 until maxOf(raw.size, boosted.size)) {
+            val r = raw.getOrNull(i)?.let { "%d. %s (%.1f)".format(i + 1, it.item.name, it.score) } ?: ""
+            val b = boosted.getOrNull(i)?.let { (hit, final) ->
+                "%d. %s (%.1f × %.2f = %.1f)".format(i + 1, hit.item.name, hit.score,
+                    boostFor(categoryOf.getValue(hit.item.id)), final)
+            } ?: ""
+            println("  %-34s | %s".format(r, b))
+        }
+        println()
+    }
 }
