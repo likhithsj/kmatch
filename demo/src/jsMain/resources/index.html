@@ -117,6 +117,17 @@
   .hit mark { background: var(--mark-bg); color: var(--mark-ink); border-radius: 2px; padding: 0 1px; }
   .empty { color: var(--muted); font-size: 13.5px; padding: 6px 2px; }
 
+  .note { margin: 0; color: var(--muted); font-size: 13.5px; }
+  .note code { font-family: var(--mono); font-size: 12.5px; background: var(--accent-soft); border-radius: 4px; padding: 0 4px; }
+  .hitlist { display: flex; flex-direction: column; gap: 6px; }
+  .gap-top { margin-top: 10px; }
+  .hit .chip {
+    font-size: 11.5px; color: var(--muted);
+    border: 1px solid var(--line); border-radius: 999px;
+    padding: 0 8px; flex: none; font-family: var(--sans);
+  }
+  .hit .math { font-size: 11.5px; color: var(--muted); margin-left: auto; white-space: nowrap; }
+
   footer { color: var(--muted); font-size: 12.5px; text-align: center; }
   footer a { color: var(--accent); text-decoration: none; }
   footer a:hover, footer a:focus-visible { text-decoration: underline; }
@@ -203,8 +214,52 @@ Malmö
     </div>
   </section>
 
+  <section aria-labelledby="category-h">
+    <h2 id="category-h">Categories &amp; priority (holiday boost)</h2>
+    <p class="note">
+      kmatch itself never sees a category &mdash; it only scores text. Categories are
+      <em>your</em> data: each menu line below is <code>Category | Item | keywords</code>.
+      The left list is the library's raw text score; the right list is the same scores
+      multiplied by your per-category boost and re-sorted. That one multiply-and-sort is
+      the entire "priority" feature. Try it: with <code>mocha</code>, Caff&egrave; Mocha and
+      Peppermint Mocha tie on text, and the Holiday boost breaks the tie.
+    </p>
+    <div class="row">
+      <div class="field">
+        <label for="cquery">Query</label>
+        <input type="text" id="cquery" value="mocha" autocomplete="off" spellcheck="false">
+      </div>
+      <div class="field narrow">
+        <label for="ccutoff">Score cutoff</label>
+        <input type="text" id="ccutoff" value="55" inputmode="numeric" autocomplete="off">
+      </div>
+    </div>
+    <div class="row" id="boosts" aria-label="Boost per category"></div>
+    <div class="split">
+      <div class="field">
+        <label for="citems">Menu (Category | Item | keywords)</label>
+        <textarea id="citems" spellcheck="false">Hot Coffee | Caffè Latte | latte, milk
+Hot Coffee | Caffè Mocha | mocha, chocolate
+Hot Coffee | Caramel Macchiato | caramel, vanilla
+Hot Coffee | Espresso | shot, doppio
+Cold Drinks | Cold Brew | cold brew
+Cold Drinks | Iced Matcha Tea Latte | matcha, iced
+Food | Chocolate Croissant | pastry, chocolate
+Food | Jalapeño Cheddar Bagel | bagel, spicy
+Holiday Drinks | Peppermint Mocha | mocha, mint
+Holiday Drinks | Gingerbread Latte | gingerbread, holiday</textarea>
+      </div>
+      <div class="field">
+        <label id="craw-label" for="craw">Raw text score (kmatch alone)</label>
+        <div id="craw" class="hitlist" aria-labelledby="craw-label" aria-live="polite"></div>
+        <label id="cboosted-label" for="cboosted" class="gap-top">With boost (score &times; category weight)</label>
+        <div id="cboosted" class="hitlist" aria-labelledby="cboosted-label" aria-live="polite"></div>
+      </div>
+    </div>
+  </section>
+
   <footer>
-    Every score here is bit-exact with Python's RapidFuzz &mdash; verified by 1,460 golden vectors on every commit.
+    Every score here is bit-exact with Python's RapidFuzz &mdash; verified by 3,260 golden vectors on every commit.
     <a href="https://github.com/likhithsj/kmatch">io.github.likhithsj:kmatch</a>
   </footer>
 </main>

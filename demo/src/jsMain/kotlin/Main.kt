@@ -171,9 +171,126 @@ fun main() {
         }
     }
 
+    // --- Categories & priority ---------------------------------------------
+    // The pattern from samples/menu-search and docs/learn/07: the library
+    // scores a FLAT list of items (category is just data each item carries);
+    // priority is one multiply-and-sort applied on top, outside the library.
+    val cquery = el("cquery") as HTMLInputElement
+    val ccutoff = el("ccutoff") as HTMLInputElement
+    val citems = el("citems") as HTMLTextAreaElement
+    val boostsBox = el("boosts")
+    val craw = el("craw")
+    val cboosted = el("cboosted")
+
+    // Forward reference so dynamically created boost inputs can re-render.
+    var renderCategoriesRef: () -> Unit = {}
+
+    data class CatItem(val category: String, val name: String, val keywords: String)
+
+    fun parseMenu(): List<CatItem> =
+        citems.value.split('\n').mapNotNull { line ->
+            val parts = line.split('|').map { it.trim() }
+            val category = parts[0].ifEmpty { "Other" }
+            when {
+                parts.size == 1 -> parts[0].takeIf { it.isNotEmpty() }?.let { CatItem("Other", it, "") }
+                parts.size == 2 -> CatItem(category, parts[1], "")
+                else -> CatItem(category, parts[1], parts.drop(2).joinToString(" ").replace(',', ' '))
+            }
+        }.filter { it.name.isNotEmpty() }
+
+    // One editable boost input per category found in the textarea. Values the
+    // user typed survive re-parses; new categories default to 1.00 if their
+    // name says "holiday", 0.95 otherwise (the soft-boost band from guide 07).
+    val boostInputs = LinkedHashMap<String, HTMLInputElement>()
+    fun syncBoostInputs(categories: List<String>) {
+        if (boostInputs.keys.toList() == categories) return
+        val kept = boostInputs.mapValues { it.value.value }
+        boostInputs.clear()
+        boostsBox.textContent = ""
+        for (cat in categories) {
+            val inputId = "boost-" + cat.lowercase().replace(Regex("[^a-z0-9]+"), "-")
+            val field = document.createElement("div").apply { className = "field narrow" }
+            val label = document.createElement("label").apply {
+                textContent = "$cat boost"
+                setAttribute("for", inputId)
+            }
+            val input = (document.createElement("input") as HTMLInputElement).apply {
+                type = "text"
+                id = inputId
+                value = kept[cat] ?: if ("holiday" in cat.lowercase()) "1.00" else "0.95"
+                setAttribute("inputmode", "decimal")
+                setAttribute("autocomplete", "off")
+            }
+            input.addEventListener("input", { renderCategoriesRef() })
+            field.appendChild(label)
+            field.appendChild(input)
+            boostsBox.appendChild(field)
+            boostInputs[cat] = input
+        }
+    }
+
+    fun hitRow(target: HTMLElement, badge: String, name: String, category: String, math: String? = null) {
+        val row = document.createElement("div").apply { className = "hit" }
+        row.appendChild(document.createElement("span").apply { className = "score"; textContent = badge })
+        row.appendChild(document.createElement("span").apply { textContent = name })
+        row.appendChild(document.createElement("span").apply { className = "chip"; textContent = category })
+        if (math != null) {
+            row.appendChild(document.createElement("span").apply { className = "math"; textContent = math })
+        }
+        target.appendChild(row)
+    }
+
+    fun emptyRow(target: HTMLElement) {
+        target.appendChild(document.createElement("div").apply {
+            className = "empty"
+            textContent = "No item reaches the cutoff."
+        })
+    }
+
+    fun renderCategories() {
+        val items = parseMenu()
+        syncBoostInputs(items.map { it.category }.distinct())
+        val cut = ccutoff.value.trim().toDoubleOrNull()?.coerceIn(0.0, 100.0)
+
+        // ONE library call over the flat list; the searchable text per item is
+        // "name + keywords" (the keySelector pattern from samples/menu-search).
+        val hits = extractSorted(
+            cquery.value,
+            items,
+            keySelector = { "${it.name} ${it.keywords}".trim() },
+            processor = processor(),
+            scoreCutoff = cut,
+        )
+
+        fun boostOf(category: String): Double =
+            boostInputs[category]?.value?.trim()?.toDoubleOrNull()?.coerceIn(0.0, 2.0) ?: 1.0
+
+        craw.textContent = ""
+        cboosted.textContent = ""
+        if (hits.isEmpty()) {
+            emptyRow(craw)
+            emptyRow(cboosted)
+            return
+        }
+
+        // Left: what the library said (text relevance only, ties keep menu order).
+        for (h in hits) hitRow(craw, h.score.fmt(), h.item.name, h.item.category)
+
+        // Right: YOUR ranking rule — score × category weight, re-sorted.
+        val ranked = hits
+            .map { it to it.score * boostOf(it.item.category) }
+            .sortedByDescending { it.second }
+        for ((h, final) in ranked) {
+            val b = boostOf(h.item.category)
+            hitRow(cboosted, final.fmt(), h.item.name, h.item.category, "${h.score.fmt()} × ${b.asDynamic().toFixed(2)}")
+        }
+    }
+    renderCategoriesRef = ::renderCategories
+
     fun renderAll() {
         renderPairwise()
         renderExtraction()
+        renderCategories()
     }
 
     for (input in listOf(s1, s2, pre, foldBox, query, cutoff)) {
@@ -181,6 +298,9 @@ fun main() {
     }
     choices.addEventListener("input", { renderExtraction() })
     scorerSel.addEventListener("change", { renderExtraction() })
+    for (input in listOf(cquery, ccutoff, citems)) {
+        input.addEventListener("input", { renderCategories() })
+    }
 
     renderAll()
 }
