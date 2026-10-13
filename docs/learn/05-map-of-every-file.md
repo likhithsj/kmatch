@@ -63,6 +63,7 @@ the `fun main()` that wires input boxes to library calls.
 | Folder | Shows |
 |---|---|
 | `menu-search/` | Integrating with an app-shaped model: category tree + keyword map, one `extractTop` call, and a runnable old-vs-new comparison table. **Start here if you're integrating.** |
+| `migrate-fuzzywuzzy/` | Replacing me.xdrop:fuzzywuzzy behind the same interactor signature: the string-round-trip identity bug demonstrated, the typed drop-in, a side-by-side table, pinned tests, and a migration checklist. |
 | `consumer-check/` | A consumer of the *published* artifact, used by CI to verify 14 environments (the evidence behind `VERIFICATION.md`). |
 | `consumer-check-android/` | Same proof from an Android (AGP) module. |
 | `ios-skie/` | Calling kmatch from **Swift** through SKIE, with assertions. The iOS team's starting point. |
