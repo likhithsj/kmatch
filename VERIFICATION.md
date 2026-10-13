@@ -73,3 +73,26 @@ every commit):
 - Locally: `cd samples/consumer-check && ../../gradlew jvmTest jsNodeTest`
   (any machine), native/simulator tasks on their host OS.
 - The playground needs nothing: <https://likhithsj.github.io/kmatch/>.
+
+## Verify the parity claim yourself (~10 minutes)
+
+The "bit-exact with RapidFuzz" claim is mechanically checkable — don't take
+this document's word for it:
+
+```bash
+git clone https://github.com/likhithsj/kmatch && cd kmatch
+pip install rapidfuzz==3.14.5         # the pinned reference implementation
+python3 tools/generate_vectors.py     # re-asks real RapidFuzz all 3,260 questions
+python3 tools/generate_unicode_tables.py
+git diff --exit-code                  # empty diff = committed expectations ARE RapidFuzz's answers
+./gradlew jvmTest                     # kmatch reproduces every one of them, exactly
+```
+
+What this proves: the committed `GoldenVectors.kt` was not hand-written —
+regenerating it from the real Python RapidFuzz produces an identical file —
+and the library passes all of it with exact float64 equality. CI runs the
+same drift check on every push ([ci.yml](.github/workflows/ci.yml), job
+*Golden vector drift check*), so the claim re-proves itself continuously,
+not once. The benchmark numbers are reproducible the same way:
+`KMATCH_BENCH=1 ./gradlew jvmTest --tests '*BenchmarkTest'` (the two
+comparison libraries are test-only dependencies of the harness).

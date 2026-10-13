@@ -23,7 +23,7 @@ New to the codebase? **[docs/learn/](docs/learn/)** is a six-part guided tour �
 ## Install
 
 ```kotlin
-implementation("io.github.likhithsj:kmatch:0.3.1")
+implementation("io.github.likhithsj:kmatch:1.0.0")
 ```
 
 One dependency line, every target: JVM/Android, iOS (device + both simulators), macOS, watchOS, tvOS, JS, Wasm, Linux, Windows, Android Native — Gradle selects the right artifact automatically. The JVM artifact targets Java 8 bytecode, so it runs on any JVM from 8 up. Consuming from Swift? See the [SKIE sample](samples/ios-skie/).
@@ -97,6 +97,20 @@ matchingBlocks("kitten", "sitting")                // aligned blocks in both str
 
 `matchingBlocks`/`matchingRanges` recover one optimal indel alignment with Hirschberg's algorithm — linear memory, so long inputs are safe. Indices are UTF-16 char units, directly usable with `substring` or `AnnotatedString` (astral-plane characters handled correctly).
 
+## Accent-insensitive search
+
+Users type `caffe latte` and `jalapeno`; menus say `Caffè Latte` and `Jalapeño`. The built-in `searchFold` processor makes those exact matches:
+
+```kotlin
+extractTop("jalapeno bagel", items, keySelector = { it.name }, processor = ::searchFold)
+Fuzz.ratio("caffe latte", "Caffè Latte", processor = ::searchFold)   // 100.0
+
+stripAccents("Łódź")        // "Lodz" — the fold alone, case preserved
+searchFold("  Caffè! ")     // "caffe" — fold + defaultProcess
+```
+
+The fold is deliberately conservative: NFKD plus mark-stripping only for scripts where marks are optional (Latin/Greek/Cyrillic accents, Hebrew points, Arabic harakat), explicit folds for non-decomposable Latin letters (`ø`→`o`, `æ`→`ae`, `ß`→`ss`, `ł`→`l`, …), and compatibility forms (full-width `Ｔｏｋｙｏ`→`Tokyo`, ligature `ﬁ`→`fi`). Indic and Southeast Asian marks are left intact (they are vowels), Hangul stays composed. This is kmatch's own opt-in processor — RapidFuzz parity is untouched because no scorer folds unless you pass it.
+
 ## How parity is verified
 
 `tools/generate_vectors.py` pins RapidFuzz 3.14.5 and emits `GoldenVectors.kt` — 3,260 (inputs, scorer, expected score) cases covering plain ASCII, accented Latin, astral-plane characters, empty strings, strings past 64 code points, token edge cases, and non-Latin scripts through `defaultProcess`. CI asserts **exact** float64 equality on every tested target and regenerates the vectors to catch drift.
@@ -133,8 +147,8 @@ Throughput comparison only — output scales and rounding differ between librari
 ## Roadmap
 
 - ✅ **0.1.0–0.3.0** (released) — parity core, bit-parallel performance core, generic extraction, `dedupe`, `matchingRanges`, published benchmarks, playground, API docs.
-- **0.3.1** (current) — JVM artifact targets Java 8 bytecode, so it loads on any JVM from 8 up.
-- **1.0.0** — API freeze after early-adopter feedback. Candidates being weighed: a public prepared-query (`CachedScorer`) API, ready-made accent-folding processors (`searchFold`), lazy `Sequence` extraction.
+- ✅ **0.3.1** (released) — JVM artifact targets Java 8 bytecode, so it loads on any JVM from 8 up.
+- **1.0.0** (current) — API freeze, closing the early-adopter feedback round: built-in accent-folding processors (`searchFold`, `stripAccents`) shipped; the prepared-query cache stays internal (extraction uses it automatically) and lazy `Sequence` extraction is deferred — both can be added later without breaking anything, which is the test an API freeze has to pass.
 
 ## License
 

@@ -4,7 +4,7 @@ A room-by-room tour. Paths are relative to the repo root.
 
 ## The library itself — `src/commonMain/kotlin/io/github/likhithsj/kmatch/`
 
-Nine files. "Common" means this exact code compiles for JVM, iOS, JS, Wasm,
+Eleven files. "Common" means this exact code compiles for JVM, iOS, JS, Wasm,
 Windows, Linux — everything. There is deliberately zero platform-specific
 code.
 
@@ -14,6 +14,8 @@ code.
 | `Indel.kt` | 1 | **The engine.** `IndelPattern` (the bulb masks), the single-Long and blocked LCS loops, distance/similarity + cutoff early-exits. |
 | `UnicodeTables.kt` | 1½ | Generated lookup tables: which characters are letters/digits/whitespace, and lowercase mappings — probed from RapidFuzz itself. Don't edit by hand; regenerate with the tool. |
 | `Process.kt` | 2 | `defaultProcess` — lowercase, de-punctuate, trim. The standard pre-cleaning. |
+| `Fold.kt` | 2 | `stripAccents` / `searchFold` — the opt-in accent fold ("jalapeno" finds "Jalapeño"). kmatch's own feature, outside RapidFuzz parity. |
+| `FoldTables.kt` | 1½ | Generated NFKD fold table behind `stripAccents`. Regenerate with `tools/generate_fold_tables.py`. |
 | `Fuzz.kt` | 2 | All ten public scorers (`ratio` … `weightedRatio`) and their internal `...Cps` implementations that mirror RapidFuzz step for step. The biggest file; organized top (public wrappers) to bottom (internals). |
 | `CachedScorer.kt` | 2½ | `prepareScorer` — the "build the query's masks once, reuse across a scan" machinery that extraction uses behind the scenes. |
 | `Extract.kt` | 3 | The search API: `extractOne/Top/Sorted/All` (string and generic-`T` flavors), the `Scorer` interface, `Scorers` presets, result types. |
@@ -51,6 +53,7 @@ code.
 |---|---|
 | `generate_vectors.py` | RapidFuzz is pinned at 3.14.5; this re-asks it all 3,260 questions and rewrites `GoldenVectors.kt`. CI runs it on every push and fails if the committed file differs ("drift check"). |
 | `generate_unicode_tables.py` | Same idea for `UnicodeTables.kt`. |
+| `generate_fold_tables.py` | Generates `FoldTables.kt` (the `stripAccents` fold). Pinned to Python 3.12's Unicode tables; not part of the CI drift check because it has no RapidFuzz reference — rerun it only when the fold rules change. |
 
 ## The demo — `demo/`
 
