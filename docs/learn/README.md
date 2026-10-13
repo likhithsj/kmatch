@@ -11,6 +11,7 @@ Read the files in order — each one builds on the previous:
 | [04-the-bit-parallel-trick.md](04-the-bit-parallel-trick.md) | Why it's fast: the 64-lightbulbs-in-one-number trick |
 | [05-map-of-every-file.md](05-map-of-every-file.md) | What every file in the repo is for |
 | [06-from-push-to-your-phone.md](06-from-push-to-your-phone.md) | How a `git push` here ends up as a library inside someone's app |
+| [07-categories-and-priorities.md](07-categories-and-priorities.md) | Searching across categories and ranking them — tie-breakers, boosts, and the holiday-drinks example |
 
 **About the 📍 code links:** throughout the guides, 📍 lines link to the
 exact file and line on GitHub. They're pinned to one commit, so they stay
