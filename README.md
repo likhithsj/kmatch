@@ -18,6 +18,8 @@ Fast, RapidFuzz-compatible fuzzy string matching for Kotlin Multiplatform.
 
 **[Live playground →](https://likhithsj.github.io/kmatch/)** — compare strings across every scorer and search a collection with match highlighting, running the real library as Kotlin/JS in your browser. **[API docs →](https://likhithsj.github.io/kmatch/api/)** (Source in [`demo/`](demo/).)
 
+New to the codebase? **[docs/learn/](docs/learn/)** is a six-part guided tour — where execution starts, the journey of a call through every file, the scoring math, the bit-parallel trick, a map of every file, and how a push becomes a published release.
+
 ## Install
 
 ```kotlin
