@@ -17,6 +17,8 @@ a time.
 
 ## The idea: 64 lightbulbs inside one number
 
+📍 [lcsSingle (the fast path) — Indel.kt:102](https://github.com/likhithsj/kmatch/blob/f08b4be/src/commonMain/kotlin/io/github/likhithsj/kmatch/Indel.kt#L102) · [the two magic lines — Indel.kt:111](https://github.com/likhithsj/kmatch/blob/f08b4be/src/commonMain/kotlin/io/github/likhithsj/kmatch/Indel.kt#L111) · [counting off-bulbs — Indel.kt:114](https://github.com/likhithsj/kmatch/blob/f08b4be/src/commonMain/kotlin/io/github/likhithsj/kmatch/Indel.kt#L114)
+
 A `Long` in Kotlin is a 64-bit number. Don't think of it as a number —
 think of it as a **row of 64 lightbulbs** (bits), each one ON (1) or OFF (0).
 
@@ -35,6 +37,8 @@ s = (s + u) or (s - u)   // update all 64 positions at once
 Two lines. All the cleverness of the 3,600-cell grid, compressed.
 
 ## How does text become bulbs? Masks.
+
+📍 [IndelPattern — mask building in the init block — Indel.kt:38](https://github.com/likhithsj/kmatch/blob/f08b4be/src/commonMain/kotlin/io/github/likhithsj/kmatch/Indel.kt#L38)
 
 Step one is building a **mask** for the pattern (say the query,
 `"banana"`): for each distinct character, one Long whose ON bulbs mark where
@@ -65,6 +69,8 @@ time, including right at the tricky 63/64/65-character boundary.
 
 ## What if the pattern is longer than 64 characters?
 
+📍 [lcsBlocked (the carry juggling) — Indel.kt:117](https://github.com/likhithsj/kmatch/blob/f08b4be/src/commonMain/kotlin/io/github/likhithsj/kmatch/Indel.kt#L117)
+
 Use several Longs side by side — bulbs 0–63 in the first, 64–127 in the
 second, and so on ("the blocked variant"). The only subtlety is that the `+`
 in the update can overflow one Long and must *carry* into the next, like
@@ -75,6 +81,8 @@ In `Indel.kt` you'll find both paths: a single-Long fast path for patterns
 up to 64 characters (most queries), and the blocked path above that.
 
 ## The second trick: build once, reuse 20,000 times
+
+📍 [prepareScorer — CachedScorer.kt:23](https://github.com/likhithsj/kmatch/blob/f08b4be/src/commonMain/kotlin/io/github/likhithsj/kmatch/CachedScorer.kt#L23)
 
 Look at the masks again — they depend **only on the pattern** (the query),
 not on the text being scanned. So when `extractOne` searches a collection:
@@ -91,6 +99,8 @@ That's what `prepareScorer` (`CachedScorer.kt`) sets up, and why calling
 rebuild the masks for every single item.
 
 ## The third trick: don't compare at all
+
+📍 [the length-bound check — Indel.kt:187](https://github.com/likhithsj/kmatch/blob/f08b4be/src/commonMain/kotlin/io/github/likhithsj/kmatch/Indel.kt#L187)
 
 Before any bulbs light up, `indelNormalizedSimilarity` checks the length
 gap. A 5-character query can never score above a certain bound against a

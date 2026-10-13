@@ -22,6 +22,12 @@ Below, ➜ means "calls into". Files are in
 
 ## Stop 1 — The front door: `Extract.kt`
 
+📍 **Jump to the code:**
+[`extractOne` (string version) — Extract.kt:176](https://github.com/likhithsj/kmatch/blob/f08b4be/src/commonMain/kotlin/io/github/likhithsj/kmatch/Extract.kt#L176) ·
+[`extractOne` (generic twin) — Extract.kt:64](https://github.com/likhithsj/kmatch/blob/f08b4be/src/commonMain/kotlin/io/github/likhithsj/kmatch/Extract.kt#L64) ·
+[prepare-once call — Extract.kt:76](https://github.com/likhithsj/kmatch/blob/f08b4be/src/commonMain/kotlin/io/github/likhithsj/kmatch/Extract.kt#L76) ·
+[perfect-100 early stop — Extract.kt:88](https://github.com/likhithsj/kmatch/blob/f08b4be/src/commonMain/kotlin/io/github/likhithsj/kmatch/Extract.kt#L88)
+
 `extractOne(...)` lives here. For a list of plain strings it immediately
 hands off to its generic twin with `keySelector = { it }` ("the text of each
 item is… the item itself"). Then it does three things before any scoring:
@@ -29,7 +35,7 @@ item is… the item itself"). Then it does three things before any scoring:
 1. **Process the query once.** `defaultProcess("new york jets")` → it's
    already lowercase, so it stays `"new york jets"`. (Stop 2 explains what
    processing does.)
-2. **Prepare the scorer once.** ➜ `prepareScorer(...)` in `CachedScorer.kt`.
+2. **Prepare the scorer once.** ➜ [`prepareScorer` — CachedScorer.kt:23](https://github.com/likhithsj/kmatch/blob/f08b4be/src/commonMain/kotlin/io/github/likhithsj/kmatch/CachedScorer.kt#L23).
    This converts the query to code points a single time and pre-builds
    anything reusable, so the per-item loop doesn't redo query work for
    every choice. (For 4 items it hardly matters; for 20,000 it's the
@@ -43,6 +49,9 @@ The loop also has two smart exits:
 
 ## Stop 2 — Cleaning text: `Process.kt` + `UnicodeTables.kt`
 
+📍 [`defaultProcess` — Process.kt:16](https://github.com/likhithsj/kmatch/blob/f08b4be/src/commonMain/kotlin/io/github/likhithsj/kmatch/Process.kt#L16) ·
+[the generated tables — UnicodeTables.kt](https://github.com/likhithsj/kmatch/blob/f08b4be/src/commonMain/kotlin/io/github/likhithsj/kmatch/UnicodeTables.kt)
+
 `defaultProcess` is the standard "make text comparable" step:
 lowercase everything, turn every non-letter/non-digit into a space, trim the
 ends. `"New York Jets!"` → `"new york jets"`.
@@ -54,6 +63,8 @@ promise, kmatch doesn't trust the platform — it uses lookup tables in
 engine, character by character (`tools/generate_unicode_tables.py`).
 
 ## Stop 3 — From text to numbers: `CodePoints.kt`
+
+📍 [`toCodePoints` — CodePoints.kt:10](https://github.com/likhithsj/kmatch/blob/f08b4be/src/commonMain/kotlin/io/github/likhithsj/kmatch/CodePoints.kt#L10)
 
 Computers store text as UTF-16 units, where an emoji is secretly TWO units.
 Comparing those directly gets Unicode wrong (a single 😀 would look like two
@@ -68,6 +79,10 @@ line works on these integer arrays, never on `String`. This is why emoji,
 Chinese, Arabic, etc. all score correctly.
 
 ## Stop 4 — Choosing a strategy: `Fuzz.kt`
+
+📍 [`weightedRatio` (public) — Fuzz.kt:131](https://github.com/likhithsj/kmatch/blob/f08b4be/src/commonMain/kotlin/io/github/likhithsj/kmatch/Fuzz.kt#L131) ·
+[`weightedRatioCps` (the router) — Fuzz.kt:445](https://github.com/likhithsj/kmatch/blob/f08b4be/src/commonMain/kotlin/io/github/likhithsj/kmatch/Fuzz.kt#L445) ·
+[`ratioCps` — Fuzz.kt:172](https://github.com/likhithsj/kmatch/blob/f08b4be/src/commonMain/kotlin/io/github/likhithsj/kmatch/Fuzz.kt#L172)
 
 Our call used the default scorer, `weightedRatio` ("WRatio"). Think of it as
 a *router*: it looks at the two strings and decides which comparison styles
@@ -89,6 +104,11 @@ All of these styles eventually need the same primitive: *how many edits
 apart are these two code-point arrays?* That's the ground floor.
 
 ## Stop 5 — The engine room: `Indel.kt`
+
+📍 [`indelNormalizedSimilarity` — Indel.kt:179](https://github.com/likhithsj/kmatch/blob/f08b4be/src/commonMain/kotlin/io/github/likhithsj/kmatch/Indel.kt#L179) ·
+[the escape hatch — Indel.kt:187](https://github.com/likhithsj/kmatch/blob/f08b4be/src/commonMain/kotlin/io/github/likhithsj/kmatch/Indel.kt#L187) ·
+[`lcsLength` — Indel.kt:158](https://github.com/likhithsj/kmatch/blob/f08b4be/src/commonMain/kotlin/io/github/likhithsj/kmatch/Indel.kt#L158) ·
+[`IndelPattern` — Indel.kt:38](https://github.com/likhithsj/kmatch/blob/f08b4be/src/commonMain/kotlin/io/github/likhithsj/kmatch/Indel.kt#L38)
 
 `indelNormalizedSimilarity(a, b, cutoff)` computes the score in three steps:
 

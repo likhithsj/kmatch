@@ -6,6 +6,8 @@ playground — every number here is the real output).
 
 ## The base: `ratio`
 
+📍 [public wrapper — Fuzz.kt:29](https://github.com/likhithsj/kmatch/blob/f08b4be/src/commonMain/kotlin/io/github/likhithsj/kmatch/Fuzz.kt#L29) · [ratioCps — Fuzz.kt:172](https://github.com/likhithsj/kmatch/blob/f08b4be/src/commonMain/kotlin/io/github/likhithsj/kmatch/Fuzz.kt#L172) · [the formula — Indel.kt:179](https://github.com/likhithsj/kmatch/blob/f08b4be/src/commonMain/kotlin/io/github/likhithsj/kmatch/Indel.kt#L179)
+
 The formula from file 01, applied to whole strings:
 
 ```
@@ -43,6 +45,8 @@ always why.
 
 ## `partialRatio` — finding a needle in a haystack
 
+📍 [public wrapper — Fuzz.kt:43](https://github.com/likhithsj/kmatch/blob/f08b4be/src/commonMain/kotlin/io/github/likhithsj/kmatch/Fuzz.kt#L43) · [partialRatioCps — Fuzz.kt:238](https://github.com/likhithsj/kmatch/blob/f08b4be/src/commonMain/kotlin/io/github/likhithsj/kmatch/Fuzz.kt#L238) · [the sliding windows — Fuzz.kt:187](https://github.com/likhithsj/kmatch/blob/f08b4be/src/commonMain/kotlin/io/github/likhithsj/kmatch/Fuzz.kt#L187)
+
 Question it answers: *"does the SHORT string appear, roughly, somewhere
 INSIDE the long one?"*
 
@@ -59,6 +63,8 @@ short and the things being searched are long (titles, descriptions).
 
 ## `tokenSortRatio` — word order doesn't matter
 
+📍 [public wrapper — Fuzz.kt:54](https://github.com/likhithsj/kmatch/blob/f08b4be/src/commonMain/kotlin/io/github/likhithsj/kmatch/Fuzz.kt#L54) · [tokenSortRatioCps — Fuzz.kt:344](https://github.com/likhithsj/kmatch/blob/f08b4be/src/commonMain/kotlin/io/github/likhithsj/kmatch/Fuzz.kt#L344)
+
 Split into words, sort the words alphabetically, join, then plain `ratio`:
 
 ```
@@ -68,6 +74,8 @@ Split into words, sort the words alphabetically, join, then plain `ratio`:
 ```
 
 ## `tokenSetRatio` — extra words don't matter (much)
+
+📍 [public wrapper — Fuzz.kt:69](https://github.com/likhithsj/kmatch/blob/f08b4be/src/commonMain/kotlin/io/github/likhithsj/kmatch/Fuzz.kt#L69) · [tokenSetRatioCps — Fuzz.kt:347](https://github.com/likhithsj/kmatch/blob/f08b4be/src/commonMain/kotlin/io/github/likhithsj/kmatch/Fuzz.kt#L347)
 
 Splits both into word SETS, looks at the overlap, and is generous when one
 side's words are a subset of the other's:
@@ -87,6 +95,8 @@ variants do the same word tricks but score windows instead of whole strings.
 Nothing new conceptually — just the two ideas composed.
 
 ## `weightedRatio` (WRatio) — the "just pick for me" scorer
+
+📍 [public wrapper — Fuzz.kt:131](https://github.com/likhithsj/kmatch/blob/f08b4be/src/commonMain/kotlin/io/github/likhithsj/kmatch/Fuzz.kt#L131) · [the decision tree — Fuzz.kt:445](https://github.com/likhithsj/kmatch/blob/f08b4be/src/commonMain/kotlin/io/github/likhithsj/kmatch/Fuzz.kt#L445) · [the sacred constants — Fuzz.kt:450](https://github.com/likhithsj/kmatch/blob/f08b4be/src/commonMain/kotlin/io/github/likhithsj/kmatch/Fuzz.kt#L450)
 
 The default everywhere. It's a small decision tree, with constants copied
 exactly from RapidFuzz (never round these — parity!):
@@ -110,9 +120,13 @@ weightedRatio("hello world", "hello world xy")
 
 ## `quickRatio` (QRatio)
 
+📍 [Fuzz.kt:145](https://github.com/likhithsj/kmatch/blob/f08b4be/src/commonMain/kotlin/io/github/likhithsj/kmatch/Fuzz.kt#L145)
+
 `ratio` with one extra rule: either string empty (after processing) → 0.
 
 ## `scoreCutoff` — the contract on every scorer
+
+📍 [the skip-the-work check — Indel.kt:187](https://github.com/likhithsj/kmatch/blob/f08b4be/src/commonMain/kotlin/io/github/likhithsj/kmatch/Indel.kt#L187)
 
 Passing `scoreCutoff = 90` means: *"if the answer would be below 90, give me
 0.0 instead."* Two things make it more than a filter:
@@ -127,6 +141,8 @@ Passing `scoreCutoff = 90` means: *"if the answer would be below 90, give me
    review, fixed, and locked in with 1,800 dedicated cutoff test vectors.
 
 ## Processing happens BEFORE all of this
+
+📍 [defaultProcess — Process.kt:16](https://github.com/likhithsj/kmatch/blob/f08b4be/src/commonMain/kotlin/io/github/likhithsj/kmatch/Process.kt#L16)
 
 Every scorer takes an optional `processor`. If you pass `::defaultProcess`,
 both strings are lowercased/de-punctuated *first*, and only then scored.

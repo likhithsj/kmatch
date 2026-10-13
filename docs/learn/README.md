@@ -12,5 +12,10 @@ Read the files in order — each one builds on the previous:
 | [05-map-of-every-file.md](05-map-of-every-file.md) | What every file in the repo is for |
 | [06-from-push-to-your-phone.md](06-from-push-to-your-phone.md) | How a `git push` here ends up as a library inside someone's app |
 
+**About the 📍 code links:** throughout the guides, 📍 lines link to the
+exact file and line on GitHub. They're pinned to one commit, so they stay
+accurate forever even as the code evolves. To jump locally instead: open
+the file in your IDE and use Cmd/Ctrl+G (go to line).
+
 No prior knowledge needed beyond basic programming (functions, loops,
 strings). Kotlin specifics are explained where they matter.

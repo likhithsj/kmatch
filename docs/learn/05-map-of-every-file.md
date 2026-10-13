@@ -20,6 +20,20 @@ code.
 | `Dedupe.kt` | 3 | `dedupe` — collapse near-duplicate entries, keeping one representative per group. |
 | `Align.kt` | 3 | `matchingBlocks` / `matchingRanges` — recover *which characters* matched, for highlighting in UIs. Uses a divide-and-conquer method (Hirschberg) so long strings don't eat memory. |
 
+**Jump straight to the landmark of each file:**
+[`toCodePoints` — CodePoints.kt:10](https://github.com/likhithsj/kmatch/blob/f08b4be/src/commonMain/kotlin/io/github/likhithsj/kmatch/CodePoints.kt#L10) ·
+[`IndelPattern` — Indel.kt:38](https://github.com/likhithsj/kmatch/blob/f08b4be/src/commonMain/kotlin/io/github/likhithsj/kmatch/Indel.kt#L38) ·
+[`lcsSingle` — Indel.kt:102](https://github.com/likhithsj/kmatch/blob/f08b4be/src/commonMain/kotlin/io/github/likhithsj/kmatch/Indel.kt#L102) ·
+[`defaultProcess` — Process.kt:16](https://github.com/likhithsj/kmatch/blob/f08b4be/src/commonMain/kotlin/io/github/likhithsj/kmatch/Process.kt#L16) ·
+[`Fuzz.ratio` — Fuzz.kt:29](https://github.com/likhithsj/kmatch/blob/f08b4be/src/commonMain/kotlin/io/github/likhithsj/kmatch/Fuzz.kt#L29) ·
+[`weightedRatioCps` — Fuzz.kt:445](https://github.com/likhithsj/kmatch/blob/f08b4be/src/commonMain/kotlin/io/github/likhithsj/kmatch/Fuzz.kt#L445) ·
+[`prepareScorer` — CachedScorer.kt:23](https://github.com/likhithsj/kmatch/blob/f08b4be/src/commonMain/kotlin/io/github/likhithsj/kmatch/CachedScorer.kt#L23) ·
+[`Scorer` — Extract.kt:11](https://github.com/likhithsj/kmatch/blob/f08b4be/src/commonMain/kotlin/io/github/likhithsj/kmatch/Extract.kt#L11) ·
+[`extractOne` (generic) — Extract.kt:64](https://github.com/likhithsj/kmatch/blob/f08b4be/src/commonMain/kotlin/io/github/likhithsj/kmatch/Extract.kt#L64) ·
+[`dedupe` — Dedupe.kt:22](https://github.com/likhithsj/kmatch/blob/f08b4be/src/commonMain/kotlin/io/github/likhithsj/kmatch/Dedupe.kt#L22) ·
+[`matchingBlocks` — Align.kt:38](https://github.com/likhithsj/kmatch/blob/f08b4be/src/commonMain/kotlin/io/github/likhithsj/kmatch/Align.kt#L38) ·
+[`hirschberg` — Align.kt:89](https://github.com/likhithsj/kmatch/blob/f08b4be/src/commonMain/kotlin/io/github/likhithsj/kmatch/Align.kt#L89)
+
 ## The tests — `src/commonTest/` (+ `src/jvmTest/`)
 
 | File | What it proves |
