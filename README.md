@@ -28,6 +28,8 @@ implementation("io.github.likhithsj:kmatch:1.0.0")
 
 One dependency line, every target: JVM/Android, iOS (device + both simulators), macOS, watchOS, tvOS, JS, Wasm, Linux, Windows, Android Native — Gradle selects the right artifact automatically. The JVM artifact targets Java 8 bytecode, so it runs on any JVM from 8 up. Consuming from Swift? See the [SKIE sample](samples/ios-skie/).
 
+Want to see it inside a real app? [`samples/starbucks-menu/`](samples/starbucks-menu/) is a Compose Multiplatform Android + iOS app that pulls the Starbucks® menu from the web and searches it with kmatch — typos, accents, nicknames and a category boost from one `extractTop` call.
+
 ## Scorers
 
 All scorers return a `Double` on RapidFuzz's 0–100 scale and match its output exactly:

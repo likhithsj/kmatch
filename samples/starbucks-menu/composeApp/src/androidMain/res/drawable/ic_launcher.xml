@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A plain cup-and-magnifier mark. Deliberately not a brand logo. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path android:fillColor="#1E6B45" android:pathData="M0,0h108v108h-108z" />
+    <path android:fillColor="#F7F3EC"
+        android:pathData="M30,38h40v22a16,16 0 0 1 -16,16h-8a16,16 0 0 1 -16,-16z" />
+    <path android:fillColor="#F7F3EC"
+        android:pathData="M70,44h6a8,8 0 0 1 0,16h-6v-6h6a2,2 0 0 0 0,-4h-6z" />
+    <path android:fillColor="#F7F3EC" android:pathData="M28,80h44v5h-44z" />
+    <path android:strokeColor="#3B2A20" android:strokeWidth="5" android:fillColor="#00000000"
+        android:pathData="M62,58m-11,0a11,11 0 1 1 22,0a11,11 0 1 1 -22,0" />
+    <path android:strokeColor="#3B2A20" android:strokeWidth="5" android:strokeLineCap="round" android:fillColor="#00000000"
+        android:pathData="M70,66l10,10" />
+</vector>
