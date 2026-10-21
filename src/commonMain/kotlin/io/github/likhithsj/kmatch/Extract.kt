@@ -157,6 +157,130 @@ public fun <T> extractAll(
 }
 
 // ---------------------------------------------------------------------------
+// Multi-field extraction: one query, several keys per item, best field wins.
+// ---------------------------------------------------------------------------
+
+/**
+ * Finds the best match for [query] among [choices], scoring each of an
+ * item's [keySelectors] strings independently and taking the item's BEST
+ * field score.
+ *
+ * Prefer this over concatenating fields into one key when the fields are
+ * independent aliases for the item (display name, keywords, category name):
+ * concatenation dilutes a strong hit in one short field with the length of
+ * the others — `weightedRatio` in particular down-scales matches once the
+ * combined key grows past 8x the query length — while per-field scoring
+ * keeps "best alias wins" semantics.
+ *
+ * Ties keep input order; the query's match masks are built once and reused
+ * across every field of every item. Returns null when no field of any
+ * choice reaches [scoreCutoff].
+ */
+public fun <T> extractOne(
+    query: String,
+    choices: Iterable<T>,
+    keySelectors: List<(T) -> String>,
+    scorer: Scorer = Scorers.WeightedRatio,
+    processor: ((String) -> String)? = null,
+    scoreCutoff: Double? = null,
+): ExtractedItem<T>? {
+    require(keySelectors.isNotEmpty()) { "keySelectors must not be empty" }
+    val processedQuery = if (processor != null) processor(query) else query
+    val cutoff = scoreCutoff ?: 0.0
+    val prepared = prepareScorer(scorer, processedQuery.toCodePoints())
+    var best: ExtractedItem<T>? = null
+    var currentCutoff = scoreCutoff
+    outer@ for ((index, item) in choices.withIndex()) {
+        for (selector in keySelectors) {
+            val key = selector(item)
+            val processedChoice = if (processor != null) processor(key) else key
+            val score =
+                if (prepared != null) prepared.score(processedChoice.toCodePoints(), currentCutoff ?: 0.0)
+                else scorer.score(processedQuery, processedChoice, currentCutoff)
+            if (score >= cutoff && (best == null || score > best.score)) {
+                best = ExtractedItem(item, score, index)
+                currentCutoff = score
+                if (score == 100.0) break@outer
+            }
+        }
+    }
+    return best
+}
+
+/**
+ * Returns the [limit] best matches for [query] among [choices], each item
+ * scored as its best [keySelectors] field (see the multi-field [extractOne]).
+ * Sorted by score descending; ties keep input order.
+ */
+public fun <T> extractTop(
+    query: String,
+    choices: Iterable<T>,
+    keySelectors: List<(T) -> String>,
+    limit: Int = 5,
+    scorer: Scorer = Scorers.WeightedRatio,
+    processor: ((String) -> String)? = null,
+    scoreCutoff: Double? = null,
+): List<ExtractedItem<T>> {
+    require(limit >= 0) { "limit must be >= 0, was $limit" }
+    if (limit == 0) return emptyList()
+    return extractSorted(query, choices, keySelectors, scorer, processor, scoreCutoff).take(limit)
+}
+
+/**
+ * Returns every choice whose best [keySelectors] field reaches [scoreCutoff],
+ * sorted by score descending; ties keep input order (see the multi-field
+ * [extractOne]).
+ */
+public fun <T> extractSorted(
+    query: String,
+    choices: Iterable<T>,
+    keySelectors: List<(T) -> String>,
+    scorer: Scorer = Scorers.WeightedRatio,
+    processor: ((String) -> String)? = null,
+    scoreCutoff: Double? = null,
+): List<ExtractedItem<T>> =
+    extractAll(query, choices, keySelectors, scorer, processor, scoreCutoff)
+        .sortedByDescending { it.score } // stable: equal scores keep input order
+
+/**
+ * Scores every choice as its best [keySelectors] field and returns all
+ * results reaching [scoreCutoff], in input order (see the multi-field
+ * [extractOne]).
+ */
+public fun <T> extractAll(
+    query: String,
+    choices: Iterable<T>,
+    keySelectors: List<(T) -> String>,
+    scorer: Scorer = Scorers.WeightedRatio,
+    processor: ((String) -> String)? = null,
+    scoreCutoff: Double? = null,
+): List<ExtractedItem<T>> {
+    require(keySelectors.isNotEmpty()) { "keySelectors must not be empty" }
+    val processedQuery = if (processor != null) processor(query) else query
+    val cutoff = scoreCutoff ?: 0.0
+    val prepared = prepareScorer(scorer, processedQuery.toCodePoints())
+    val results = ArrayList<ExtractedItem<T>>()
+    for ((index, item) in choices.withIndex()) {
+        var bestScore = -1.0
+        for (selector in keySelectors) {
+            val key = selector(item)
+            val processedChoice = if (processor != null) processor(key) else key
+            val score =
+                if (prepared != null) prepared.score(processedChoice.toCodePoints(), scoreCutoff ?: 0.0)
+                else scorer.score(processedQuery, processedChoice, scoreCutoff)
+            if (score > bestScore) {
+                bestScore = score
+                if (score == 100.0) break
+            }
+        }
+        if (bestScore >= cutoff) {
+            results.add(ExtractedItem(item, bestScore, index))
+        }
+    }
+    return results
+}
+
+// ---------------------------------------------------------------------------
 // String convenience surface, delegating to the generic functions.
 // ---------------------------------------------------------------------------
 

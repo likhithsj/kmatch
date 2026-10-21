@@ -82,6 +82,17 @@ extractOne("new york", cities, keySelector = { it.name }, processor = ::defaultP
 // ExtractedItem(item=City(name=New York, population=8300000), score=100.0, index=0)
 ```
 
+Items with several searchable fields (display name, alias keywords, category) score best with `keySelectors` — each field is scored independently and the item takes its **best** field:
+
+```kotlin
+extractTop("doppio", products,
+    keySelectors = listOf({ it.name }, { it.keywords.joinToString(" ") }),
+    processor = ::searchFold)
+// Espresso wins at 100: the keyword field matched; the name didn't dilute it.
+```
+
+Prefer this over concatenating fields into one key: concatenation makes a strong hit in one short field compete with the combined length of all of them (`weightedRatio` down-scales a match once the key grows past 8× the query length), while per-field scoring keeps "best alias wins" semantics.
+
 ## Dedupe and match highlighting
 
 ```kotlin
