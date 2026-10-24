@@ -16,9 +16,9 @@ Fast, RapidFuzz-compatible fuzzy string matching for Kotlin Multiplatform.
 
 ## Try it
 
-**[Live playground →](https://likhithsj.github.io/kmatch/)** — compare strings across every scorer and search a collection with match highlighting, running the real library as Kotlin/JS in your browser. **[API docs →](https://likhithsj.github.io/kmatch/api/)** (Source in [`demo/`](demo/).)
+**[Live playground →](https://likhithsj.github.io/kmatch/)** — compare strings across every scorer, search a collection with match highlighting, flip the accent fold on and off, and play with category boosts (raw vs boosted ranking, side by side), running the real library as Kotlin/JS in your browser. **[API docs →](https://likhithsj.github.io/kmatch/api/)** (Source in [`demo/`](demo/).)
 
-New to the codebase? **[docs/learn/](docs/learn/)** is a six-part guided tour — where execution starts, the journey of a call through every file, the scoring math, the bit-parallel trick, a map of every file, and how a push becomes a published release.
+New to the codebase? **[docs/learn/](docs/learn/)** is a seven-part guided tour — where execution starts, the journey of a call through every file, the scoring math, the bit-parallel trick, a map of every file, how a push becomes a published release, and how categories and priorities work around the library.
 
 ## Install
 
@@ -159,7 +159,17 @@ Throughput comparison only — output scales and rounding differ between librari
 
 - ✅ **0.1.0–0.3.0** (released) — parity core, bit-parallel performance core, generic extraction, `dedupe`, `matchingRanges`, published benchmarks, playground, API docs.
 - ✅ **0.3.1** (released) — JVM artifact targets Java 8 bytecode, so it loads on any JVM from 8 up.
-- **1.0.0** (current) — API freeze, closing the early-adopter feedback round: built-in accent-folding processors (`searchFold`, `stripAccents`) shipped; the prepared-query cache stays internal (extraction uses it automatically) and lazy `Sequence` extraction is deferred — both can be added later without breaking anything, which is the test an API freeze has to pass.
+- ✅ **1.0.0** (released, current) — API freeze, closing the early-adopter feedback round: built-in accent folding (`searchFold`, `stripAccents`) and multi-field extraction (`keySelectors`, best field wins) shipped. The prepared-query cache stays internal (extraction uses it automatically) and lazy `Sequence` extraction is deferred — both can be added later without breaking anything, which is the test an API freeze has to pass.
+- **Next (1.x candidates, additive only)** — a public prepared-query API, lazy `Sequence` extraction, weighted multi-field scoring. Driven by adopter feedback: [open an issue](https://github.com/likhithsj/kmatch/issues).
+
+## Samples
+
+| Folder | Shows |
+|---|---|
+| [`samples/menu-search`](samples/menu-search/) | Integrating with an app-shaped model: category tree + keyword aliases, one `extractTop` call, holiday-boost ranking, old-vs-new comparison tests. **Start here if you're integrating.** |
+| [`samples/migrate-fuzzywuzzy`](samples/migrate-fuzzywuzzy/) | Migrating off `me.xdrop:fuzzywuzzy` behind the same interactor signature, with the identity-bug evidence and a migration checklist. |
+| [`samples/ios-skie`](samples/ios-skie/) | Calling kmatch from Swift through SKIE, with assertions. |
+| [`samples/consumer-check`](samples/consumer-check/) + [`-android`](samples/consumer-check-android/) | The consumers behind [VERIFICATION.md](VERIFICATION.md)'s 14-environment matrix. |
 
 ## License
 
