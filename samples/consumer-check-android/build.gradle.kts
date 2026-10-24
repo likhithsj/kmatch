@@ -28,6 +28,6 @@ kotlin {
 }
 
 dependencies {
-    implementation("io.github.likhithsj:kmatch:0.3.1")
+    implementation("io.github.likhithsj:kmatch:1.0.0")
     testImplementation(kotlin("test"))
 }

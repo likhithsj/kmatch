@@ -1,7 +1,6 @@
 import io.github.likhithsj.kmatch.ExtractedItem
-import io.github.likhithsj.kmatch.defaultProcess
 import io.github.likhithsj.kmatch.extractSorted
-import java.text.Normalizer
+import io.github.likhithsj.kmatch.searchFold
 
 // ---------------------------------------------------------------------------
 // AFTER: the same public signature, kmatch inside.
@@ -29,9 +28,5 @@ object KmatchProductSearch {
             scoreCutoff = CUTOFF,
         )
 
-    /** Accent-fold ("jalapeño" -> "jalapeno") then RapidFuzz's default
-     *  processing (lowercase, strip punctuation). */
-    fun searchFold(s: String): String = defaultProcess(
-        Normalizer.normalize(s, Normalizer.Form.NFKD).replace(Regex("\\p{Mn}+"), "")
-    )
 }
+// The accent fold is the library's own `searchFold` since kmatch 1.0.0.

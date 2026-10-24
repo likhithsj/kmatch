@@ -17,7 +17,7 @@ kotlin {
         target.binaries.framework {
             baseName = "KmatchKit"
             isStatic = true
-            export("io.github.likhithsj:kmatch:0.3.1")
+            export("io.github.likhithsj:kmatch:1.0.0")
         }
     }
 
@@ -25,7 +25,7 @@ kotlin {
         commonMain.dependencies {
             // The published artifact from Maven Central -- exactly what any
             // iOS team would depend on. Not a project() dependency.
-            api("io.github.likhithsj:kmatch:0.3.1")
+            api("io.github.likhithsj:kmatch:1.0.0")
         }
     }
 }

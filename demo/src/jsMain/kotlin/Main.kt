@@ -3,6 +3,8 @@ import io.github.likhithsj.kmatch.Scorer
 import io.github.likhithsj.kmatch.Scorers
 import io.github.likhithsj.kmatch.defaultProcess
 import io.github.likhithsj.kmatch.extractSorted
+import io.github.likhithsj.kmatch.searchFold
+import io.github.likhithsj.kmatch.stripAccents
 import io.github.likhithsj.kmatch.matchingRanges
 import kotlinx.browser.document
 import org.w3c.dom.HTMLElement
@@ -81,37 +83,16 @@ fun main() {
         vals[name] = tdVal
     }
 
-    // Diacritic folding in two layers, the same shape as ICU's Latin-ASCII:
-    // NFD decomposition strips every base+accent letter generically
-    // ("São" -> "Sao", "Zürich" -> "Zurich"), and an explicit table covers
-    // the Latin letters that don't decompose (ø, ł, æ, ß, þ, ...). A custom
-    // processor like this is how diacritic-insensitive search composes with
-    // the parity core (which, matching RapidFuzz, never folds on its own).
-    val nonDecomposable = mapOf(
-        'ø' to "o", 'Ø' to "O", 'æ' to "ae", 'Æ' to "AE", 'œ' to "oe", 'Œ' to "OE",
-        'ß' to "ss", 'ł' to "l", 'Ł' to "L", 'đ' to "d", 'Đ' to "D",
-        'ð' to "d", 'Ð' to "D", 'þ' to "th", 'Þ' to "TH",
-        'ħ' to "h", 'Ħ' to "H", 'ŧ' to "t", 'Ŧ' to "T", 'ı' to "i",
-    )
-    // NFKD also folds compatibility forms (full-width Ｔｏｋｙｏ -> Tokyo).
-    // Marks stripped: Latin/Greek/Cyrillic combining accents, Hebrew points
-    // and cantillation, Arabic harakat -- scripts where marks are optional
-    // vocalization. Indic scripts are left alone: their marks ARE the vowels.
-    fun foldDiacritics(s: String): String {
-        val stripped = (s.asDynamic().normalize("NFKD") as String)
-            .replace(Regex("[\\u0300-\\u036F\\u0591-\\u05C7\\u064B-\\u065F\\u0670]"), "")
-        if (stripped.none { it in nonDecomposable }) return stripped
-        return buildString(stripped.length) {
-            for (ch in stripped) append(nonDecomposable[ch] ?: ch.toString())
-        }
-    }
-
+    // Since 1.0.0 the diacritic fold is the library's own: stripAccents is
+    // the fold alone (NFKD + optional-mark stripping + non-decomposable Latin
+    // letters), searchFold adds defaultProcess on top. The checkboxes map
+    // straight onto the published API.
     fun processor(): ((String) -> String)? {
         val fold = foldBox.checked
         val prep = pre.checked
         return when {
-            fold && prep -> { s -> defaultProcess(foldDiacritics(s)) }
-            fold -> ::foldDiacritics
+            fold && prep -> ::searchFold
+            fold -> ::stripAccents
             prep -> ::defaultProcess
             else -> null
         }

@@ -9,7 +9,7 @@ plugins {
 }
 
 dependencies {
-    implementation("io.github.likhithsj:kmatch:0.3.1")
+    implementation("io.github.likhithsj:kmatch:1.0.0")
     // Comparison baseline only (an existing Kotlin fuzzy library).
     implementation("ca.solo-studios:kt-fuzzy:0.1.0")
     testImplementation(kotlin("test"))

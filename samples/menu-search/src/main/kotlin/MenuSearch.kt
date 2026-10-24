@@ -1,8 +1,7 @@
 import io.github.likhithsj.kmatch.ExtractedItem
-import io.github.likhithsj.kmatch.defaultProcess
 import io.github.likhithsj.kmatch.extractTop
 import io.github.likhithsj.kmatch.matchingRanges
-import java.text.Normalizer
+import io.github.likhithsj.kmatch.searchFold
 
 // ---------------------------------------------------------------------------
 // 1. THE MENU MODEL -- a category tree with keyword maps, the shape a real
@@ -57,11 +56,7 @@ class MenuSearch(menu: MenuCategory) {
     fun highlight(query: String, item: MenuItem): List<IntRange> =
         matchingRanges(query.lowercase(), item.name.lowercase())
 
-    companion object {
-        /** Accent-fold ("jalapeño" -> "jalapeno") then RapidFuzz's default
-         *  processing (lowercase, strip punctuation). */
-        fun searchFold(s: String): String = defaultProcess(
-            Normalizer.normalize(s, Normalizer.Form.NFKD).replace(Regex("\\p{Mn}+"), "")
-        )
-    }
 }
+// The accent fold ("jalapeño" -> "jalapeno" + defaultProcess) used to live
+// here as a hand-rolled helper; since kmatch 1.0.0 it is the library's own
+// `searchFold`, imported above.

@@ -38,7 +38,7 @@ kotlin {
 
     sourceSets {
         commonMain.dependencies {
-            implementation("io.github.likhithsj:kmatch:0.3.1")
+            implementation("io.github.likhithsj:kmatch:1.0.0")
         }
         commonTest.dependencies {
             implementation(kotlin("test"))

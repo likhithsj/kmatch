@@ -9,7 +9,7 @@ plugins {
 }
 
 dependencies {
-    implementation("io.github.likhithsj:kmatch:0.3.1")
+    implementation("io.github.likhithsj:kmatch:1.0.0")
     // The library being replaced -- kept only to run both engines side by side.
     implementation("me.xdrop:fuzzywuzzy:1.4.0")
     testImplementation(kotlin("test"))
