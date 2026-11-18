@@ -8,6 +8,7 @@ import io.github.likhithsj.menusearch.menu.MenuCatalog
 import io.github.likhithsj.menusearch.menu.MenuItem
 import io.github.likhithsj.menusearch.menu.MenuRepository
 import io.github.likhithsj.menusearch.search.MenuSearchEngine
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
@@ -40,14 +41,24 @@ class AppState(
     var selectedCategory: BrowseNode? by mutableStateOf(null)
     var selectedItem: MenuItem? by mutableStateOf(null)
 
-    val results: List<MenuSearchEngine.Hit>
-        get() = engine?.search(query).orEmpty()
+    /** Search results, scoped to the open category when there is one. */
+    fun results(): List<MenuSearchEngine.Hit> {
+        val scope = selectedCategory?.allItems()?.mapTo(HashSet()) { it.id }
+        return engine?.search(query, within = scope).orEmpty()
+    }
 
     val isSearching: Boolean get() = query.trim().length >= MenuSearchEngine.MIN_QUERY_LENGTH
 
     fun start() {
         scope.launch {
-            val bundled = runCatching { repository.loadBundled() }.getOrNull()
+            // CancellationException must propagate, so no runCatching here.
+            val bundled = try {
+                repository.loadBundled()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                null
+            }
             if (bundled != null) install(bundled, DataSource.Bundled(bundled.fetchedAt))
             refresh()
         }
@@ -60,6 +71,8 @@ class AppState(
             try {
                 val live = repository.fetchLive()
                 install(live, DataSource.Live)
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 val fallback = (source as? DataSource.Bundled)
                     ?: (source as? DataSource.LiveFailed)?.fallback

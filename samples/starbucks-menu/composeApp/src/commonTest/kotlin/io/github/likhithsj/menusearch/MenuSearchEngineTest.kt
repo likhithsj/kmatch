@@ -61,6 +61,16 @@ class MenuSearchEngineTest {
     }
 
     @Test
+    fun withinRestrictsResultsBeforeTheLimit() {
+        val mochaIds = catalog.items.filter { it.name == "White Chocolate Mocha" }.mapTo(HashSet()) { it.id }
+        // Unscoped, limit 1 returns the featured Caffè Mocha; scoped, the limit
+        // applies to what is left after the filter.
+        assertEquals("Caffè Mocha", engine.search("mocha", limit = 1).single().item.name)
+        assertEquals("White Chocolate Mocha", engine.search("mocha", limit = 1, within = mochaIds).single().item.name)
+        assertTrue(engine.search("mocha", within = emptySet()).isEmpty())
+    }
+
+    @Test
     fun shortOrBlankQueriesReturnNothing() {
         assertTrue(engine.search("").isEmpty())
         assertTrue(engine.search(" c ").isEmpty())

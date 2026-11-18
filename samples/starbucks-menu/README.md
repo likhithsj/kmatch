@@ -7,10 +7,10 @@ typo tolerance, accent folding, nicknames and a soft category boost — all
 from one `extractTop` call.
 
 ```
-pumkin spice  →  Pumpkin Spice Latte        (typo)
+capucino      →  Cappuccino                 (typo)
 caffe latte   →  Caffè Latte                (accent)
 frap          →  …Frappuccino® Blended…     (nickname, via alias table)
-capucino      →  Cappuccino                 (typo)
+americano     →  Caffè Americano            (name beats a category-only match)
 ```
 
 Every row shows kmatch's text score (RapidFuzz-identical, 0–100) and, when a
@@ -40,11 +40,10 @@ is slow. To run on a device, put your Apple team id in
 `iosApp/Configuration/Config.xcconfig` (`TEAM_ID=`).
 
 The sample reuses the repository root's Gradle wrapper like every other
-sample, and depends on kmatch **from source** via a composite build
-(`includeBuild("../..")` in `settings.gradle.kts`) so it always exercises the
-current tree — including `searchFold`, which shipped in 1.0.0. Once that
-version is on Maven Central, dropping the `includeBuild` block turns the
-dependency into the ordinary `io.github.likhithsj:kmatch:1.0.0` line.
+sample, and depends on the **published** artifact
+(`io.github.likhithsj:kmatch:1.0.0` from Maven Central, pinned in
+`gradle/libs.versions.toml`) — exactly what an app team would write, not a
+`project()` dependency on this repository.
 
 ## Where the menu comes from
 
@@ -53,14 +52,14 @@ dependency into the ordinary `io.github.likhithsj:kmatch:1.0.0` line.
 | Live | `GET https://www.starbucks.com/apiproxy/v1/ordering/menu` on every launch and on the refresh button |
 | Bundled | `composeApp/src/commonMain/composeResources/files/menu.json`, refreshed with `python3 tools/fetch_menu.py` |
 
-The endpoint returns the category tree (9 top-level menus, ~340 product
-entries, ~290 distinct products) with names, images, sizes, hot/iced form and
+The endpoint returns the category tree (9 top-level menus, a few hundred
+product entries; 375 entries / ~310 distinct products in the current snapshot) with names, images, sizes, hot/iced form and
 the product's web path. It does **not** carry prices, calories or
 descriptions — those are per-store and per-product calls behind the ordering
 flow — so the app shows what the public menu shows and links each item to its
 starbucks.com page. The status line under the search field says which source
-is on screen (`Live menu from starbucks.com` / `Bundled snapshot from Oct 20,
-2026` / `Offline · showing snapshot…`).
+is on screen (`Live menu from starbucks.com` / `Bundled snapshot from <date>` /
+`Offline · showing snapshot…`).
 
 The same product appears under several categories on the site ("Trending"
 repeats drinks that also live under "Latte"); `MenuCatalog` collapses them to
@@ -81,6 +80,16 @@ val scored =
                scorer = Scorers.TokenSetRatio)   // nicknames match as whole words
 // item score = best (score × key weight) over its keys; then × category boost
 ```
+
+Why not the library's own multi-field `keySelectors` overload? It is the
+right tool when every field uses one scorer and "best field wins" is the whole
+rule (see [`samples/menu-search`](../menu-search/)). This app needs two things
+on top: a different scorer for nicknames, and a per-key-type weight. So it
+runs two `extractAll` scans and merges per item itself — about fifteen lines.
+
+Searching inside a category passes the category's item ids as `within`, which
+filters before the result limit, so a scoped search is never starved by better
+matches elsewhere on the menu.
 
 Boosts live in the 0.9–1.0 band (featured "The Latest" 1.0, beverages 0.97,
 food 0.95, at-home coffee 0.90): a featured drink wins a *tie* with its
@@ -126,7 +135,8 @@ tools/fetch_menu.py          refresh the bundled snapshot
 Tests: `commonTest` covers flatten/dedupe and the ranking rules on a fixture;
 `androidUnitTest/BundledSnapshotTest` runs real queries against the real
 bundled snapshot so a payload-shape change or ranking regression fails
-locally first.
+locally first. Those queries use evergreen items only, because the snapshot is
+seasonal: refreshing it swaps pumpkin for peppermint and back.
 
 ## Trademarks
 

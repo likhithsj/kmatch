@@ -73,7 +73,12 @@ class MenuSearchEngine(
         aliasKeys = all.filter { it.key.kind == KeyKind.ALIAS }
     }
 
-    fun search(query: String, limit: Int = 40): List<Hit> {
+    /**
+     * @param within when non-null, only items whose id is in this set are
+     *   returned (searching inside one category). Applied BEFORE [limit], so
+     *   a scoped search is not starved by better matches elsewhere on the menu.
+     */
+    fun search(query: String, limit: Int = 40, within: Set<String>? = null): List<Hit> {
         val q = query.trim()
         if (q.length < MIN_QUERY_LENGTH) return emptyList()
 
@@ -93,6 +98,7 @@ class MenuSearchEngine(
         }
 
         return byItem.values
+            .filter { within == null || it.item.id in within }
             .map { acc ->
                 Hit(
                     item = acc.item,

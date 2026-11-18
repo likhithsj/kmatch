@@ -30,23 +30,31 @@ class BundledSnapshotTest {
         assertTrue(catalog.items.count { it.imageUrl != null } > catalog.items.size / 2)
     }
 
+    // Evergreen items only: the snapshot is refreshed with tools/fetch_menu.py
+    // and seasonal drinks (pumpkin, peppermint, ...) come and go with it.
     @Test
     fun realWorldQueries() {
         fun first(q: String) = engine.search(q).first().item.name
-        assertTrue(first("pumkin spice").contains("Pumpkin Spice"), first("pumkin spice"))
-        assertTrue(first("frap").contains("Frappuccino"), first("frap"))
-        assertTrue(first("cold foam").endsWith("Cold Foam"), first("cold foam"))
-        assertTrue(engine.search("frap").take(5).all { it.item.name.contains("Frappuccino") }, engine.search("frap").take(5).map { it.item.name }.toString())
-        // A nickname never wins through a partial match inside an unrelated word.
-        engine.search("plumbing").filter { it.item.name.contains("Pumpkin Spice Latte") }.forEach {
-            assertEquals(it.nameScore, it.textScore, it.item.name)
-        }
-        assertTrue(first("psl").contains("Pumpkin Spice Latte"), first("psl"))
-        assertTrue(first("caffe latte") == "Caffè Latte", first("caffe latte"))
-        assertTrue(first("pike").contains("Pike Place"), first("pike"))
         assertTrue(first("capucino").contains("Cappuccino"), first("capucino"))
-        assertTrue(first("americano") == "Caffè Americano", first("americano"))
+        assertEquals("Caffè Americano", first("americano"))
+        assertEquals("Caffè Latte", first("caffe latte"))
+        assertTrue(first("cold foam").endsWith("Cold Foam"), first("cold foam"))
         assertTrue(first("egg bites").contains("Egg Bites"), first("egg bites"))
+        assertTrue(first("pike").contains("Pike Place"), first("pike"))
+        val frap = engine.search("frap").take(5).map { it.item.name }
+        assertTrue(frap.all { it.contains("Frappuccino") }, frap.toString())
+    }
+
+    @Test
+    fun scopedSearchIsNotStarvedByTheRestOfTheMenu() {
+        // "latte" matches far more than 5 items menu-wide; scoping to the food
+        // tree must still return food, not an empty tail of the global top 5.
+        val food = catalog.tree.single { it.name == "Food" }.allItems().mapTo(HashSet()) { it.id }
+        val scoped = engine.search("egg", limit = 5, within = food)
+        assertTrue(scoped.isNotEmpty())
+        assertTrue(scoped.all { it.item.id in food })
+        val drinksOnly = engine.search("latte", limit = 5, within = food)
+        assertTrue(drinksOnly.all { it.item.id in food })
     }
 
     @Test

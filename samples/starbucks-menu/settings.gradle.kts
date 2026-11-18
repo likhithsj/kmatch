@@ -4,10 +4,9 @@
 //   ../../gradlew -p . :composeApp:assembleDebug          (Android APK)
 //   open iosApp/iosApp.xcodeproj                           (iOS, on a Mac)
 //
-// kmatch comes from SOURCE via a composite build (not Maven Central) so the
-// sample always exercises the current tree -- including `searchFold`, which
-// shipped in 1.0.0. Swap the includeBuild for a plain Maven dependency once
-// that version is published; nothing else changes.
+// kmatch is the published artifact from Maven Central (see
+// gradle/libs.versions.toml), exactly what an app team would depend on --
+// not a project() dependency on this repository's sources.
 pluginManagement {
     repositories {
         google {
@@ -36,11 +35,5 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "kmatch-starbucks-menu"
-
-includeBuild("../..") {
-    dependencySubstitution {
-        substitute(module("io.github.likhithsj:kmatch")).using(project(":"))
-    }
-}
 
 include(":composeApp")

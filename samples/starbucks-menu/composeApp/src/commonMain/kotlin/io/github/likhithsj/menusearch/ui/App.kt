@@ -93,7 +93,7 @@ fun App(isDark: Boolean = false) {
 @Composable
 fun MenuSearchScreen(state: AppState) {
     val category = state.selectedCategory
-    val hits = remember(state.query, state.engine) { state.results }
+    val hits = remember(state.query, state.engine, category) { state.results() }
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
@@ -127,23 +127,22 @@ fun MenuSearchScreen(state: AppState) {
             SearchField(
                 query = state.query,
                 onQueryChange = { state.query = it },
-                placeholder = if (category != null) "Search in ${category.name}" else "Try “pumkin spice”, “frap” or “caffe latte”",
+                placeholder = if (category != null) "Search in ${category.name}" else "Try “capucino”, “frap” or “caffe latte”",
             )
             StatusLine(state)
             val catalog = state.catalog
             when {
+                catalog == null && state.source is DataSource.LiveFailed && !state.isRefreshing -> Box(
+                    Modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center,
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("Couldn\u2019t load the menu.", style = MaterialTheme.typography.bodyLarge)
+                        Spacer(Modifier.height(12.dp))
+                        AssistChip(onClick = state::refresh, label = { Text("Try again") })
+                    }
+                }
                 catalog == null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
-                state.isSearching -> ResultsList(
-                    hits = hits.let { hits ->
-                        if (category == null) hits
-                        else {
-                            val inScope = category.allItems().mapTo(HashSet()) { it.id }
-                            hits.filter { it.item.id in inScope }
-                        }
-                    },
-                    query = state.query,
-                    onClick = { state.selectedItem = it },
-                )
+                state.isSearching -> ResultsList(hits = hits, query = state.query, onClick = { state.selectedItem = it })
                 category != null -> CategoryContents(category, onOpenCategory = { state.selectedCategory = it }, onClick = { state.selectedItem = it })
                 else -> CategoryIndex(catalog.tree, onOpenCategory = { state.selectedCategory = it })
             }

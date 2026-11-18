@@ -1,8 +1,8 @@
-# Kotlin is pinned to the version the kmatch root build uses (the composite
-# build loads one Kotlin Gradle plugin for both). Every library below is a
-# release built with Kotlin 2.2.x so its metadata is readable by 2.2.21.
+# Kotlin matches the version kmatch 1.0.0 was built with. Every library below
+# is a release built with Kotlin 2.2.x so its metadata is readable by 2.2.21.
 [versions]
 kotlin = "2.2.21"
+kmatch = "1.0.0"
 agp = "8.13.2"
 composeMultiplatform = "1.9.3"
 androidx-activity = "1.12.4"
@@ -27,8 +27,7 @@ ktor-client-okhttp = { module = "io.ktor:ktor-client-okhttp", version.ref = "kto
 ktor-client-darwin = { module = "io.ktor:ktor-client-darwin", version.ref = "ktor" }
 coil-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil" }
 coil-network-ktor3 = { module = "io.coil-kt.coil3:coil-network-ktor3", version.ref = "coil" }
-# Version is irrelevant: the composite build substitutes the local source tree.
-kmatch = { module = "io.github.likhithsj:kmatch", version = "1.0.0" }
+kmatch = { module = "io.github.likhithsj:kmatch", version.ref = "kmatch" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
