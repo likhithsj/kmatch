@@ -1,9 +1,9 @@
 // Verifies that the published kmatch artifact is consumable from Swift
 // through SKIE (https://skie.touchlab.co): the framework builds for Apple
 // targets and swift/Verify.swift asserts golden values through the generated
-// Swift API. Run via ../../tools -> .github/workflows/skie-sample.yml or:
+// Swift API. Run by .github/workflows/skie-sample.yml, or on a Mac:
 //
-//   ./gradlew linkReleaseFrameworkMacosArm64 && ./verify.sh   (on a Mac)
+//   ./verify.sh        (builds both frameworks, then runs the Swift checks)
 plugins {
     kotlin("multiplatform") version "2.2.21"
     id("co.touchlab.skie") version "0.10.14"

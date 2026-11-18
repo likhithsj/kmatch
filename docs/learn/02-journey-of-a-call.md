@@ -38,8 +38,9 @@ item is… the item itself"). Then it does three things before any scoring:
 2. **Prepare the scorer once.** ➜ [`prepareScorer` — CachedScorer.kt:23](https://github.com/likhithsj/kmatch/blob/f08b4be/src/commonMain/kotlin/io/github/likhithsj/kmatch/CachedScorer.kt#L23).
    This converts the query to code points a single time and pre-builds
    anything reusable, so the per-item loop doesn't redo query work for
-   every choice. (For 4 items it hardly matters; for 20,000 it's the
-   difference between 66 ms and 4.6 ms.)
+   every choice. (For 4 items it hardly matters; for 20,000 items scored
+   with `Scorers.Ratio`, where the query's match masks are reused too, it's
+   the difference between 66 ms and 4.6 ms.)
 3. **Loop over the choices**, keeping the best result seen so far.
 
 The loop also has two smart exits:
@@ -151,7 +152,8 @@ edits  = 3 + 4 − 2×3 = 1        (insert the 'r')
 score  = 100 × (1 − 1/7) = 85.714285…
 ```
 
-Run it yourself in the playground — it prints exactly `85.71428571428571`.
+Run it yourself in the playground — it shows `85.71` (it rounds to two
+decimals; the exact value is `85.71428571428572`).
 
 **Next:** [03-the-scoring-math.md](03-the-scoring-math.md) — every scoring
 style, explained with examples like this one.

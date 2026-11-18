@@ -16,7 +16,7 @@ your push
    │                    iOS simulator
    └── Ubuntu machine:  the drift check — reruns tools/generate_vectors.py
                         against real RapidFuzz and fails if your change made
-                        any of the 3,260 answers differ
+                        any of the 4,380 answers differ
 ```
 
 Green checkmarks = your change provably didn't break the promise. Red =
@@ -30,9 +30,10 @@ push, so https://likhithsj.github.io/kmatch/ always runs the latest `main`.
 Releases are deliberately boring (that's a feature). The whole procedure:
 
 ```
-1. gradle.properties:  version=0.4.0-SNAPSHOT  →  version=0.4.0   (commit)
-2. Create a GitHub Release with tag v0.4.0
-3. ...that's it. The tag triggers release.yml.
+1. gradle.properties:  version=1.1.0-SNAPSHOT  →  version=1.1.0   (commit)
+2. git tag v1.1.0 && git push origin main v1.1.0
+3. ...that's it. The tag triggers release.yml. (Afterwards, bump
+   gradle.properties to the next -SNAPSHOT; RELEASING.md has the checklist.)
 ```
 
 The release workflow, on a macOS machine:
@@ -47,8 +48,8 @@ The release workflow, on a macOS machine:
    metadata?) and then released
 
 Two properties worth knowing:
-- **Immutable:** once 0.4.0 is on Central, it can never be changed or
-  deleted. A mistake means shipping 0.4.1, never editing 0.4.0. (This
+- **Immutable:** once 1.1.0 is on Central, it can never be changed or
+  deleted. A mistake means shipping 1.1.1, never editing 1.1.0. (This
   happened for real: 0.3.0 shipped requiring Java 21 by accident; the fix
   is 0.3.1, and 0.3.0 will say Java-21-only forever.)
 - **~30 minutes of propagation:** after the workflow goes green, Central's
@@ -60,7 +61,7 @@ A developer anywhere writes one line:
 
 ```kotlin
 dependencies {
-    implementation("io.github.likhithsj:kmatch:0.3.1")
+    implementation("io.github.likhithsj:kmatch:1.0.0")
 }
 ```
 
@@ -80,13 +81,15 @@ exact bytes Act 2 published.
 
 Three ongoing mechanisms keep the story honest after shipping:
 
-- **The drift check** runs on every future push — the 3,260-answer contract
+- **The drift check** runs on every future push — the 4,380-answer contract
   with RapidFuzz can't erode quietly.
-- **The consumer matrix** (`verify-consumers.yml`) periodically installs the
-  *published* artifact exactly like a stranger would and re-runs golden
-  assertions on 14 environments — Java 8 through 21, Android, iOS/watchOS/
-  tvOS simulators, Windows, Swift-via-SKIE. Results are summarized with
-  links in `VERIFICATION.md`.
+- **The consumer matrix** (`verify-consumers.yml`, run by hand or whenever
+  the consumer samples change) installs the *published* artifact exactly
+  like a stranger would and re-runs golden assertions on 13 environments —
+  Java 8 through 21, Android, JS, Wasm, Linux, macOS, iOS/watchOS/tvOS
+  simulators, Windows. Swift-via-SKIE has its own workflow
+  (`skie-sample.yml`). Results are summarized with links in
+  `VERIFICATION.md`.
 - **Anyone can re-verify**: the benchmark harness, the vector generator,
   and all the workflows are in the repo. No claim in the README relies on
   "trust me".
@@ -98,7 +101,7 @@ Three ongoing mechanisms keep the story honest after shipping:
                    │
                    ├──▶ docs.yml ──▶ playground website updates
                    │
-              tag v0.4.0
+              tag v1.1.0
                    │
                    ▼
              release.yml (test → sign → upload)
@@ -112,8 +115,10 @@ Three ongoing mechanisms keep the story honest after shipping:
         someone's app, on any platform 📱💻🌐⌚
 ```
 
-That's the end of the tour. If you read all six files: you now know where
-execution starts, the path every call takes, the math, the speed trick, what
-every file is for, and how the whole thing ships. The next best step is
+That's the end of the core tour. If you read all six files so far: you now
+know where execution starts, the path every call takes, the math, the speed
+trick, what every file is for, and how the whole thing ships. One more file,
+[07-categories-and-priorities.md](07-categories-and-priorities.md), covers
+what sits *around* the library in a real app: category trees and ranking. The next best step is
 doing: open `samples/menu-search/`, run it, change a query, break a test on
 purpose, and watch the machinery react.

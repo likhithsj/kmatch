@@ -98,6 +98,13 @@ That's what `prepareScorer` (`CachedScorer.kt`) sets up, and why calling
 `extract*` beats writing your own loop over `Fuzz.ratio` — your loop would
 rebuild the masks for every single item.
 
+One precision: the masks are reused for the scorers whose work is a single
+comparison against the query — `Scorers.Ratio`, `QuickRatio`,
+`TokenSortRatio`, `PartialRatio`, `PartialTokenSortRatio`. The others,
+including the default `WeightedRatio`, still convert the query to code
+points only once, but they compare several derived strings per item and
+build masks for those as they go.
+
 ## The third trick: don't compare at all
 
 📍 [the length-bound check — Indel.kt:187](https://github.com/likhithsj/kmatch/blob/f08b4be/src/commonMain/kotlin/io/github/likhithsj/kmatch/Indel.kt#L187)
@@ -112,11 +119,11 @@ way.
 ## What all three tricks add up to
 
 Measured by the benchmark in this repo (`BenchmarkTest`, run it yourself
-with `KMATCH_BENCH=1 ./gradlew jvmTest --tests '*BenchmarkTest'`):
+with `KMATCH_BENCH=1 ./gradlew jvmTest --tests '*BenchmarkTest' --rerun`):
 
 ```
-search 20,000 items, old textbook grid:   ~66 ms
-search 20,000 items, bulbs + reuse:       ~4.6 ms
+search 20,000 items, masks rebuilt per item:  ~66 ms
+search 20,000 items, masks built once:       ~4.6 ms
 ...and with a cutoff of 80:               ~4.0 ms
 ```
 

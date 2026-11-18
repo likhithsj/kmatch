@@ -14,8 +14,9 @@ Read the files in order — each one builds on the previous:
 | [07-categories-and-priorities.md](07-categories-and-priorities.md) | Searching across categories and ranking them — tie-breakers, boosts, and the holiday-drinks example |
 
 **About the 📍 code links:** throughout the guides, 📍 lines link to the
-exact file and line on GitHub. They're pinned to one commit, so they stay
-accurate forever even as the code evolves. To jump locally instead: open
+exact file and line on GitHub. They're pinned to fixed commits, so each link
+always shows the code its sentence describes, even as the code evolves (the
+line numbers are those of the pinned commit, not necessarily today's `main`). To jump locally instead: open
 the file in your IDE and use Cmd/Ctrl+G (go to line).
 
 No prior knowledge needed beyond basic programming (functions, loops,

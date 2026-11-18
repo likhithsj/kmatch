@@ -1,7 +1,9 @@
 # Releasing kmatch
 
-Everything on the code side is ready; a release needs four one-time setup
-steps (~15 minutes, owner only) and then two commands per release.
+The one-time setup below is **done** (three releases have gone out through
+it) and is kept as a reference for rotating a token or key, or for setting
+the pipeline up in a fork. A release itself is the short [Per
+release](#per-release) section at the end.
 
 ## One-time setup
 
@@ -35,20 +37,28 @@ secret*, four of them:
 | `SIGNING_KEY` | ASCII-armored private key block (step 2) |
 | `SIGNING_KEY_PASSWORD` | key passphrase (empty string if none) |
 
-### 4. Activate the workflows
+### 4. Workflows and Pages
 
-`tools/release-workflow.yml` → `.github/workflows/release.yml` and
-`tools/docs-workflow.yml` → `.github/workflows/docs.yml` — this one also publishes the browser playground at likhithsj.github.io/kmatch (move via the GitHub
-web UI: open the file → edit → rewrite the path — same as ci.yml was).
-For docs, also set Settings → Pages → Source to **GitHub Actions**.
+`.github/workflows/release.yml` publishes on a `v*` tag and
+`.github/workflows/docs.yml` deploys the playground and API docs to
+likhithsj.github.io/kmatch on every push to `main`. Both are in place.
+For docs, Settings → Pages → Source must be **GitHub Actions**.
+
+Workflow files cannot be pushed with this repository's automation
+credentials; edit them through the GitHub web UI or with a personal token
+that has the `workflow` scope.
 
 ## Per release
 
 ```sh
+# 0. before tagging: ./gradlew jvmTest, and tools/differential-fuzz/run.sh
+#    if anything under src/commonMain changed since the last release
 # 1. set the release version (drop -SNAPSHOT) in gradle.properties, commit
 # 2. tag and push -- the tag triggers the publish workflow
-git tag v0.3.0 && git push origin main v0.3.0
+git tag vX.Y.Z && git push origin main vX.Y.Z
 # 3. bump gradle.properties to the next -SNAPSHOT, commit, push
+# 4. after it lands on Central: bump the samples' pinned version and the
+#    README install line, and write the GitHub release notes
 ```
 
 Central releases are **immutable** — a published version can never be changed

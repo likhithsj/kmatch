@@ -45,7 +45,7 @@ running:
 **1. A real app (the normal case).** An app adds one line to its build:
 
 ```kotlin
-implementation("io.github.likhithsj:kmatch:0.3.1")
+implementation("io.github.likhithsj:kmatch:1.0.0")
 ```
 
 …and then calls a function. That call is the start:
@@ -78,11 +78,11 @@ travel downward:
 ┌───────────────────────────────────────────────────────────┐
 │ FLOOR 3: "search my stuff"                                │
 │   extractOne / extractTop / dedupe / matchingRanges       │
-│   (Extract.kt, Dedupe.kt, Align.kt)                       │
+│   (Extract.kt, CachedScorer.kt, Dedupe.kt, Align.kt)      │
 ├───────────────────────────────────────────────────────────┤
 │ FLOOR 2: "score two strings"                              │
 │   Fuzz.ratio, tokenSortRatio, weightedRatio, ...          │
-│   (Fuzz.kt, Process.kt)                                   │
+│   (Fuzz.kt, Process.kt, Fold.kt)                          │
 ├───────────────────────────────────────────────────────────┤
 │ FLOOR 1: "count the edits"  ← the engine                  │
 │   indel distance via bit-parallel LCS                     │
@@ -105,7 +105,7 @@ This promise explains things you'll see everywhere in the code:
 
 - Oddly specific constants (`0.95`, `1.5`, `8.0` in `weightedRatio`) —
   copied exactly from RapidFuzz, never "improved"
-- A giant generated test file (`GoldenVectors.kt`) — 3,260 answers recorded
+- A giant generated test file (`GoldenVectors.kt`) — 4,380 answers recorded
   from the real RapidFuzz, re-checked on every change
 - Comments saying "mirrors RapidFuzz" — meaning: this code is deliberately
   shaped like the original, so the outputs can't drift

@@ -90,10 +90,12 @@ each tier (`compareBy { category }.thenByDescending { score }`). Danger: a
 terrible Holiday match outranks a perfect Merch match. Only do this if the
 requirement literally says "category X always on top."
 
-## The holiday example, with real numbers
+## The holiday example, with numbers
 
-User types `"mocha"` in December. Text scores come from kmatch; the final
-column is yours:
+User types `"mocha"` in December. The first two rows are real output of
+`samples/menu-search` (see `HolidayBoostTest`); the last two are
+illustrative products added to show how a lower text score and a lower
+weight combine. The text score is kmatch's; the final column is yours:
 
 | Product | Category | text score | × boost | final |
 |---|---|---|---|---|

@@ -35,10 +35,10 @@ beyond the bug fix:
 | | fuzzywuzzy 1.4.0 | kmatch |
 |---|---|---|
 | Result carries your object | via `BoundExtractedResult.getReferent()` (typed overload, often unused) | always: `ExtractedItem<T>.item` |
-| Score parity | its own port of old fuzzywuzzy behavior | bit-exact with RapidFuzz, 3,260 golden vectors per commit |
+| Score parity | its own port of old fuzzywuzzy behavior | bit-exact with RapidFuzz, 4,380 golden vectors per commit |
 | Unicode | UTF-16 chars (emoji counts as 2) | code points |
 | Text cleanup | fixed | `processor` hook → accent folding ("jalapeno" finds "Jalapeño") |
-| Cutoff | filter after scoring | pushed into the scorer (early exits, mask reuse per scan) |
+| Cutoff | filter after scoring | pushed into the scorer (early exits, query prepared once per scan) |
 | Platforms | JVM only | all Kotlin Multiplatform targets (same behavior on iOS) |
 | Score type | `Int` | `Double` 0–100 |
 

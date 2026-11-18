@@ -71,8 +71,9 @@ public fun <T> extractOne(
 ): ExtractedItem<T>? {
     val processedQuery = if (processor != null) processor(query) else query
     val cutoff = scoreCutoff ?: 0.0
-    // For built-in scorers, convert the query once and reuse its match masks
-    // across the whole scan; custom scorers see the string-based path.
+    // For built-in scorers, prepare the query once for the whole scan (code
+    // points always; match masks too where the scorer is a single comparison
+    // against the query). Custom scorers see the string-based path.
     val prepared = prepareScorer(scorer, processedQuery.toCodePoints())
     var best: ExtractedItem<T>? = null
     var currentCutoff = scoreCutoff
@@ -139,8 +140,9 @@ public fun <T> extractAll(
 ): List<ExtractedItem<T>> {
     val processedQuery = if (processor != null) processor(query) else query
     val cutoff = scoreCutoff ?: 0.0
-    // For built-in scorers, convert the query once and reuse its match masks
-    // across the whole scan; custom scorers see the string-based path.
+    // For built-in scorers, prepare the query once for the whole scan (code
+    // points always; match masks too where the scorer is a single comparison
+    // against the query). Custom scorers see the string-based path.
     val prepared = prepareScorer(scorer, processedQuery.toCodePoints())
     val results = ArrayList<ExtractedItem<T>>()
     for ((index, item) in choices.withIndex()) {
@@ -172,9 +174,9 @@ public fun <T> extractAll(
  * combined key grows past 8x the query length — while per-field scoring
  * keeps "best alias wins" semantics.
  *
- * Ties keep input order; the query's match masks are built once and reused
- * across every field of every item. Returns null when no field of any
- * choice reaches [scoreCutoff].
+ * Ties keep input order; the query is prepared once and reused across every
+ * field of every item. Returns null when no field of any choice reaches
+ * [scoreCutoff].
  */
 public fun <T> extractOne(
     query: String,

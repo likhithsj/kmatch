@@ -2,7 +2,7 @@
 
 Every scorer in `Fuzz.kt` answers "how similar?" differently. This file
 shows each one with arithmetic you can check by hand (or paste into the
-playground — every number here is the real output).
+playground, which shows the same numbers rounded to two decimals).
 
 ## The base: `ratio`
 
@@ -139,6 +139,16 @@ Passing `scoreCutoff = 90` means: *"if the answer would be below 90, give me
    internal cutoff above 100, meaning "impossible, return 0"). An early
    version had a bug where shortcut paths ignored this; it was caught by
    review, fixed, and locked in with 1,800 dedicated cutoff test vectors.
+3. **The boundary is exact, and RapidFuzz's own.** A result *equal* to the
+   cutoff is returned. Deciding "equal" in floating point depends on which
+   scale you compare on: `partialRatio` compares its full-length windows on
+   the 0–100 scale and its prefix/suffix windows on the 0–1 scale, because
+   that is what RapidFuzz's C++ code does, and the two disagree by one
+   floating-point step for some scores. kmatch 1.0.0 compared everything on
+   one scale, so feeding a score back in as the cutoff could return 0. A
+   differential fuzzer (`tools/differential-fuzz`) found it; 900 more
+   vectors, with cutoffs exactly on the score and one step either side, now
+   pin the behavior.
 
 ## Processing happens BEFORE all of this
 
@@ -149,8 +159,9 @@ both strings are lowercased/de-punctuated *first*, and only then scored.
 That's why `ratio("Test String!", "test string", processor = ::defaultProcess)`
 is 100: after processing, the strings are literally identical. The scorers
 themselves never make case/punctuation decisions — that's the processor's
-job, and you can supply your own (the playground's "fold diacritics" option
-is exactly that: a custom processor that strips accents first).
+job, and you can supply your own. The library ships one more: `searchFold`,
+which strips accents and then applies `defaultProcess`. The playground's
+"fold diacritics" checkbox switches to it.
 
 **Next:** [04-the-bit-parallel-trick.md](04-the-bit-parallel-trick.md) —
 how the backbone-counting is made absurdly fast.
