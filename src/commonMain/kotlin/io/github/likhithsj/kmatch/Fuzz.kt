@@ -179,10 +179,27 @@ private fun normDistance(dist: Int, lensum: Int, scoreCutoff: Double): Double {
 }
 
 /**
- * Mirrors RapidFuzz's `_partial_ratio_impl`: scans every window of `longer`
- * that could yield an optimal alignment of `shorter`, skipping windows whose
- * boundary character does not occur in `shorter` at all. Assumes
- * `shorter.size <= longer.size`. Cutoff is on the 0-1 scale here.
+ * Mirrors rapidfuzz-cpp's `fuzz_detail::partial_ratio_impl` (the C++ backend
+ * is the parity target; its pure-Python fallback gates the cutoff slightly
+ * differently). Assumes `0 < shorter.size <= longer.size`; [scoreCutoffIn] is
+ * on the 0-100 scale.
+ *
+ * Three window families, in the backend's order:
+ *
+ *  1. Full-length windows `longer[i until i + len1)` (only when `longer` is
+ *     strictly longer). The backend keeps the minimum distance and gates the
+ *     resulting score **on the 0-100 scale** (`score >= score_cutoff`).
+ *  2. Windows hanging off the start, `longer[0 until i)`.
+ *  3. Windows hanging off the end, `longer[i until len2)`.
+ *     Both are gated **on the 0-1 scale** (`norm_sim >= score_cutoff / 100`).
+ *
+ * The two scales disagree by one ulp for some scores, so which one applies is
+ * observable when a cutoff sits exactly on (or one ulp off) the true score --
+ * e.g. when a caller feeds a previous result back in as the cutoff.
+ *
+ * Windows whose boundary character does not occur in `shorter` are skipped:
+ * such a window never beats its neighbour (same LCS, no shorter), so the
+ * result is unchanged.
  */
 private fun partialRatioImpl(
     shorter: IntArray,
@@ -199,40 +216,52 @@ private fun partialRatioImpl(
     var scoreCutoff = scoreCutoffIn
     var best = 0.0
 
-    // Windows hanging off the start: longer[0 until i).
+    // 1. Full-length windows. The backend prunes with a bisection search and
+    // a distance pre-filter (cutoff + 1e-5 slack); both only skip windows
+    // that could not pass the gate below, so a plain minimum is equivalent.
+    if (len2 > len1) {
+        val maximum = 2 * len1
+        var bestDist = Int.MAX_VALUE
+        for (i in 0 until len2 - len1) {
+            if (longer[i + len1 - 1] !in pattern) continue
+            val dist = maximum - 2 * pattern.lcs(longer, i, i + len1)
+            if (dist < bestDist) {
+                bestDist = dist
+                if (dist == 0) return 100.0
+            }
+        }
+        if (bestDist != Int.MAX_VALUE) {
+            val score = (1.0 - bestDist.toDouble() / maximum) * 100.0
+            if (score >= scoreCutoff) {
+                scoreCutoff = score
+                best = score
+            }
+        }
+    }
+
+    // 2. Windows hanging off the start: longer[0 until i).
     for (i in 1 until len1) {
         if (longer[i - 1] !in pattern) continue
-        val sim = indelNormalizedSimilarity(pattern, longer, 0, i, scoreCutoff)
-        if (sim > best) {
-            best = sim
-            scoreCutoff = sim
-            if (sim == 1.0) return 100.0
+        val score = indelNormalizedSimilarity(pattern, longer, 0, i, scoreCutoff / 100.0) * 100.0
+        if (score > best) {
+            best = score
+            scoreCutoff = score
+            if (score == 100.0) return 100.0
         }
     }
 
-    // Full-length windows: longer[i until i + len1).
-    for (i in 0 until len2 - len1) {
-        if (longer[i + len1 - 1] !in pattern) continue
-        val sim = indelNormalizedSimilarity(pattern, longer, i, i + len1, scoreCutoff)
-        if (sim > best) {
-            best = sim
-            scoreCutoff = sim
-            if (sim == 1.0) return 100.0
-        }
-    }
-
-    // Windows hanging off the end: longer[i until len2).
+    // 3. Windows hanging off the end: longer[i until len2).
     for (i in len2 - len1 until len2) {
         if (longer[i] !in pattern) continue
-        val sim = indelNormalizedSimilarity(pattern, longer, i, len2, scoreCutoff)
-        if (sim > best) {
-            best = sim
-            scoreCutoff = sim
-            if (sim == 1.0) return 100.0
+        val score = indelNormalizedSimilarity(pattern, longer, i, len2, scoreCutoff / 100.0) * 100.0
+        if (score > best) {
+            best = score
+            scoreCutoff = score
+            if (score == 100.0) return 100.0
         }
     }
 
-    return best * 100.0
+    return best
 }
 
 internal fun partialRatioCps(a: IntArray, b: IntArray, scoreCutoffIn: Double): Double {
@@ -240,22 +269,24 @@ internal fun partialRatioCps(a: IntArray, b: IntArray, scoreCutoffIn: Double): D
     // a cutoff above 100 can never be met, and the early returns below
     // would otherwise bypass it.
     if (scoreCutoffIn > 100.0) return 0.0
-    var scoreCutoff = scoreCutoffIn
-    if (a.isEmpty() && b.isEmpty()) return 100.0
+    if (a.isEmpty() || b.isEmpty()) return if (a.size == b.size) 100.0 else 0.0
 
     val len1 = a.size
     val len2 = b.size
     val shorter = if (len1 <= len2) a else b
     val longer = if (len1 <= len2) b else a
 
-    var res = partialRatioImpl(shorter, longer, scoreCutoff / 100.0)
+    var scoreCutoff = scoreCutoffIn
+    var res = partialRatioImpl(shorter, longer, scoreCutoff)
     if (res != 100.0 && len1 == len2) {
         scoreCutoff = max(scoreCutoff, res)
-        val res2 = partialRatioImpl(longer, shorter, scoreCutoff / 100.0)
+        val res2 = partialRatioImpl(longer, shorter, scoreCutoff)
         if (res2 > res) res = res2
     }
 
-    return if (res < scoreCutoff) 0.0 else res
+    // No final `res < cutoff` check: like the backend, every score that got
+    // here already passed the gate of the window that produced it.
+    return res
 }
 
 /**
@@ -269,31 +300,43 @@ internal fun partialRatioCpsCached(
     c: IntArray,
     scoreCutoffIn: Double,
 ): Double {
-    // RapidFuzz's C++ backend guards every scorer with early-exit paths:
-    // a cutoff above 100 can never be met, and the early returns below
-    // would otherwise bypass it.
     if (scoreCutoffIn > 100.0) return 0.0
-    if (q.isEmpty() && c.isEmpty()) return 100.0
+    if (q.isEmpty() || c.isEmpty()) return if (q.size == c.size) 100.0 else 0.0
     if (q.size > c.size) return partialRatioCps(q, c, scoreCutoffIn)
 
     var scoreCutoff = scoreCutoffIn
-    var res = partialRatioImpl(q, c, scoreCutoff / 100.0, qPattern)
+    var res = partialRatioImpl(q, c, scoreCutoff, qPattern)
     if (res != 100.0 && q.size == c.size) {
         scoreCutoff = max(scoreCutoff, res)
-        val res2 = partialRatioImpl(c, q, scoreCutoff / 100.0)
+        val res2 = partialRatioImpl(c, q, scoreCutoff)
         if (res2 > res) res = res2
     }
-    return if (res < scoreCutoff) 0.0 else res
+    return res
 }
 
 // --- tokenization ----------------------------------------------------------
 
-/** Splits on the tokenizer whitespace table, dropping empty tokens. */
+/**
+ * Splits on the tokenizer's separator table, dropping empty tokens.
+ *
+ * RapidFuzz's C++ tokenizer picks its separator table by the string's storage
+ * width: a string made only of code points up to U+00FF (a 1-byte Python
+ * string) does NOT split on NEL (U+0085) or NBSP (U+00A0), while a string
+ * containing any code point above U+00FF does. The width is a property of
+ * each input string on its own, so it is decided here per call.
+ */
 internal fun splitTokens(cps: IntArray): List<List<Int>> {
+    var wide = false
+    for (cp in cps) {
+        if (cp > 0xFF) {
+            wide = true
+            break
+        }
+    }
     val tokens = ArrayList<List<Int>>()
     var current: ArrayList<Int>? = null
     for (cp in cps) {
-        if (isSpaceCodePoint(cp)) {
+        if (isSpaceCodePoint(cp, wide)) {
             if (current != null) {
                 tokens.add(current)
                 current = null

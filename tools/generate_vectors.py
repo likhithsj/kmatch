@@ -12,6 +12,7 @@ Usage: python3 tools/generate_vectors.py
 
 from __future__ import annotations
 
+import math
 import sys
 from pathlib import Path
 
@@ -115,6 +116,20 @@ PAIRS: list[tuple[str, str]] = [
     # mixed script and emoji soup
     ("naïve 東京 😀 test", "naive 東京 😀 test!"),
     ("Grüße aus München 🍺", "gruesse aus muenchen"),
+    # token separators that depend on the string's storage width: the C++
+    # backend splits on NBSP (U+00A0) and NEL (U+0085) only inside strings
+    # that hold a code point above U+00FF (decided per string, not per pair)
+    ("\u0141\u00f3d\u017a\u00a0Kaliska", "Kaliska \u0141\u00f3d\u017a"),  # wide: NBSP splits
+    ("Z\u00fcrich\u00a0HB", "HB Z\u00fcrich"),  # all <= U+00FF: NBSP is an ordinary character
+    ("price\u00a0\u20ac5", "\u20ac5 price"),
+    ("caf\u00e9\u00a0noir", "noir caf\u00e9"),
+    ("b\u00a0a \u0100", "a b \u0100"),
+    ("b\u0085a \u0100", "a b \u0100"),
+    ("b\u00a0a \u0100", "a b"),  # only s1 is wide
+    ("b\u00a0a", "a b \u0100"),  # only s2 is wide
+    ("\u65e5\u672c\u00a0\u6771\u4eac", "\u6771\u4eac \u65e5\u672c"),
+    ("new\u00a0york \U0001F5FD", "york new \U0001F5FD"),
+    ("line one\u0085line two \u2014 end", "end \u2014 line two line one"),
 ]
 
 # Strings whose defaultProcess output is verified directly.
@@ -159,6 +174,39 @@ CUTOFF_PAIRS: list[tuple[str, str]] = [
     ("stra\u00dfe", "STRASSE"),
 ]
 CUTOFFS = [0.0, 30.0, 70.0, 90.0, 95.5, 96.0, 99.0, 100.0, 150.0]
+
+# Boundary coverage: each pair is scored with the cutoff set to its own exact
+# score and to the doubles one ulp above and below it. This is where the
+# backend's choice of comparison scale shows: partial_ratio gates full-length
+# windows on the 0-100 scale but prefix/suffix windows on the 0-1 scale, so a
+# score can survive a cutoff one ulp ABOVE it, and "use my last score as the
+# cutoff" must keep the match. Every pair here failed against an
+# implementation that compared on a single scale.
+BOUNDARY_PAIRS: list[tuple[str, str]] = [
+    ("abbabbaabba", "bababa"),  # partial_ratio 83.33333333333334, WRatio 75.00000000000001
+    ("aaaacabaaac", "babccb"),
+    ("ccabaccc", "aabbabc"),
+    ("bbcbcbcaa", "bbcbbb"),
+    ("eaebehhhh", "ebgaaafe"),
+    ("accacac", "bcaaacbccb"),
+    ("bcacbb", "bbbbccbcbc"),
+    ("caccbbbbb", "bbbcabcaa"),
+    ("babbababaabb", "abbbbaaab"),
+    ("\u00e3a\u00e1a\u00e5\u00e1\u00e2\u00e3\u00e0\u00e5\u00e0\u00e0\u00e3\u00e5", "\u00e1\u00e2\u00e3\u00e0\u00e3\u00e5"),
+    # past 64 code points (blocked bit-parallel path)
+    (
+        "gabfeeffegghhffgccheeghaehfhchchcdfbfcggeedahfbehghagehcfcdgbbfchhchcadgfeheagbdafgedegf",
+        "ebfaedbeaefbgheefchabghfahdcfcdhcefddahehhhfggbdfafbghfcdbehhhfhbhebcgbcgbgdcabbbfbf",
+    ),
+    (
+        "hcacbhcbhgbbaecbcdgbcdfbddhghcbhdghhdeghddbchdffhhddeaegdcecchabdgdgfacbhgddaabfhhdfddfchhcbfhacegehbegfhdabeddhgcfd",
+        "ghddbchdffhhddeaegdcecchabdgdgfacbhgddaabfhhdfddfchhcbfhacegehbezfhda",
+    ),
+    # ordinary strings, so the everyday path is pinned at the boundary too
+    ("new york mets", "the wonderful new york mets of queens"),
+    ("this is a test", "this is a new test!!"),
+    ("mariners vs angels", "los angeles angels of anaheim vs seattle mariners"),
+]
 
 SCORERS = [
     "ratio",
@@ -233,6 +281,21 @@ def main() -> None:
                         f'"{name}", {str(processed).lower()}, {cutoff!r}, {expected!r})'
                     )
 
+    boundary_count = 0
+    for s1, s2 in BOUNDARY_PAIRS:
+        for name in SCORERS:
+            fn = scorer_fns[name]
+            for processed in (False, True):
+                processor = utils.default_process if processed else None
+                base = fn(s1, s2, processor=processor)
+                for cutoff in (base, math.nextafter(base, math.inf), math.nextafter(base, -math.inf)):
+                    expected = fn(s1, s2, processor=processor, score_cutoff=cutoff)
+                    cutoff_cases.append(
+                        f'CutoffCase("{kt_escape(s1)}", "{kt_escape(s2)}", '
+                        f'"{name}", {str(processed).lower()}, {cutoff!r}, {expected!r})'
+                    )
+                    boundary_count += 1
+
     process_cases = [
         f'ProcessCase("{kt_escape(s)}", "{kt_escape(utils.default_process(s))}")'
         for s in PROCESS_INPUTS
@@ -266,7 +329,8 @@ def main() -> None:
 // GENERATED FILE -- DO NOT EDIT.
 // Produced by tools/generate_vectors.py against rapidfuzz=={PIN}.
 // {len(cases)} scorer cases over {len(PAIRS)} string pairs,
-// {len(cutoff_cases)} score_cutoff cases over {len(CUTOFF_PAIRS)} pairs, plus
+// {len(cutoff_cases)} score_cutoff cases ({len(cutoff_cases) - boundary_count} fixed-cutoff over {len(CUTOFF_PAIRS)} pairs,
+// {boundary_count} exact-score/one-ulp boundary over {len(BOUNDARY_PAIRS)} pairs), plus
 // {len(process_cases)} defaultProcess cases. CI regenerates this file and
 // fails on drift.
 package io.github.likhithsj.kmatch

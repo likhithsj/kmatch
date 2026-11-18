@@ -12,6 +12,15 @@ the backend's observable behavior, one code point at a time:
   * lower(cp):  default_process(chr(cp))         (for word code points)
   * space(cp):  token_sort_ratio("b"+chr(cp)+"a", "a b") == 100
                 (only a token separator can make those equal)
+  * wide-only space(cp), for cp <= U+00FF:
+                token_sort_ratio("b"+chr(cp)+"a \u0100", "a b \u0100") == 100
+                but not a separator in the narrow probe above.
+
+The last probe exists because the backend's tokenizer dispatches on the
+string's storage width: 1-byte strings (every code point <= U+00FF) use a
+separator table without NEL (U+0085) and NBSP (U+00A0); strings holding any
+wider code point use the full table. Probing with a narrow string alone
+therefore misses the wide behavior of those code points.
 
 Pin: must run against the exact RapidFuzz version in PIN below.
 Usage: python3 tools/generate_unicode_tables.py
@@ -43,6 +52,7 @@ def main() -> None:
     lower_keys: list[int] = []  # word cps whose lowercase differs from itself
     lower_vals: list[int] = []
     spaces: list[int] = []
+    wide_only_spaces: list[int] = []  # separators only in strings with a cp > U+00FF
 
     default_process = utils.default_process
     token_sort_ratio = fuzz.token_sort_ratio
@@ -70,16 +80,18 @@ def main() -> None:
             try:
                 if token_sort_ratio(f"b{ch}a", "a b") == 100.0:
                     spaces.append(cp)
+                elif cp <= 0xFF and token_sort_ratio(f"b{ch}a \u0100", "a b \u0100") == 100.0:
+                    wide_only_spaces.append(cp)
             except Exception:
                 pass
 
     flat_ranges = [v for r in word_ranges for v in r]
     print(
         f"word ranges: {len(word_ranges)}, lower deltas: {len(lower_keys)}, "
-        f"whitespace: {len(spaces)}"
+        f"whitespace: {len(spaces)}, wide-only whitespace: {len(wide_only_spaces)}"
     )
 
-    OUT.write_text(render(flat_ranges, lower_keys, lower_vals, spaces))
+    OUT.write_text(render(flat_ranges, lower_keys, lower_vals, spaces, wide_only_spaces))
     print(f"wrote {OUT}")
 
 
@@ -108,6 +120,7 @@ def render(
     lower_keys: list[int],
     lower_vals: list[int],
     spaces: list[int],
+    wide_only_spaces: list[int],
 ) -> str:
     header = f"""\
 // GENERATED FILE -- DO NOT EDIT.
@@ -117,6 +130,9 @@ def render(
 //                defaultProcess); everything else is replaced by a space.
 //   LOWER_KEYS/LOWER_VALS: simple per-code-point lowercase mapping, delta-only.
 //   WHITESPACE: code points the tokenizer treats as token separators.
+//   WHITESPACE_WIDE_ONLY: additional separators, but only inside a string
+//                that holds at least one code point above U+00FF (the
+//                backend picks its separator table by string storage width).
 package io.github.likhithsj.kmatch
 
 """
@@ -129,6 +145,9 @@ package io.github.likhithsj.kmatch
         + "\n"
         + "internal val WHITESPACE: IntArray = intArrayOf(\n    "
         + ", ".join(str(v) for v in spaces)
+        + "\n)\n"
+        + "\ninternal val WHITESPACE_WIDE_ONLY: IntArray = intArrayOf(\n    "
+        + ", ".join(str(v) for v in wide_only_spaces)
         + "\n)\n"
     )
     footer = """
@@ -162,8 +181,16 @@ internal fun lowerCodePoint(cp: Int): Int {
     return cp
 }
 
-/** True if the tokenizer treats this code point as a token separator. */
-internal fun isSpaceCodePoint(cp: Int): Boolean {
+/**
+ * True if the tokenizer treats this code point as a token separator.
+ *
+ * [wide] is whether the string being tokenized holds any code point above
+ * U+00FF; only then do the [WHITESPACE_WIDE_ONLY] code points separate.
+ */
+internal fun isSpaceCodePoint(cp: Int, wide: Boolean): Boolean {
+    if (wide && cp <= 0xFF) {
+        for (w in WHITESPACE_WIDE_ONLY) if (w == cp) return true
+    }
     var lo = 0
     var hi = WHITESPACE.size - 1
     while (lo <= hi) {

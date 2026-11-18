@@ -5,6 +5,9 @@
 //                defaultProcess); everything else is replaced by a space.
 //   LOWER_KEYS/LOWER_VALS: simple per-code-point lowercase mapping, delta-only.
 //   WHITESPACE: code points the tokenizer treats as token separators.
+//   WHITESPACE_WIDE_ONLY: additional separators, but only inside a string
+//                that holds at least one code point above U+00FF (the
+//                backend picks its separator table by string storage width).
 package io.github.likhithsj.kmatch
 
 private fun WORD_RANGESChunk0(a: IntArray, o: Int) {
@@ -4184,6 +4187,10 @@ internal val WHITESPACE: IntArray = intArrayOf(
     9, 10, 11, 12, 13, 28, 29, 30, 31, 32, 5760, 8192, 8193, 8194, 8195, 8196, 8197, 8198, 8199, 8200, 8201, 8202, 8232, 8233, 8239, 8287, 12288
 )
 
+internal val WHITESPACE_WIDE_ONLY: IntArray = intArrayOf(
+    133, 160
+)
+
 /** True if RapidFuzz's defaultProcess keeps this code point. */
 internal fun isWordCodePoint(cp: Int): Boolean {
     var lo = 0
@@ -4214,8 +4221,16 @@ internal fun lowerCodePoint(cp: Int): Int {
     return cp
 }
 
-/** True if the tokenizer treats this code point as a token separator. */
-internal fun isSpaceCodePoint(cp: Int): Boolean {
+/**
+ * True if the tokenizer treats this code point as a token separator.
+ *
+ * [wide] is whether the string being tokenized holds any code point above
+ * U+00FF; only then do the [WHITESPACE_WIDE_ONLY] code points separate.
+ */
+internal fun isSpaceCodePoint(cp: Int, wide: Boolean): Boolean {
+    if (wide && cp <= 0xFF) {
+        for (w in WHITESPACE_WIDE_ONLY) if (w == cp) return true
+    }
     var lo = 0
     var hi = WHITESPACE.size - 1
     while (lo <= hi) {
