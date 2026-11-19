@@ -58,7 +58,8 @@ that has the `workflow` scope.
 git tag vX.Y.Z && git push origin main vX.Y.Z
 # 3. bump gradle.properties to the next -SNAPSHOT, commit, push
 # 4. after it lands on Central: bump the samples' pinned version and the
-#    README install line, and write the GitHub release notes
+#    README install line, add the CHANGELOG.md entry, and write the
+#    GitHub release notes
 ```
 
 Central releases are **immutable** — a published version can never be changed

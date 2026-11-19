@@ -14,6 +14,8 @@ Fast, RapidFuzz-compatible fuzzy string matching for Kotlin Multiplatform.
 
 > **Name note:** several unrelated projects are also called "kmatch"/"KMatcher" (including a Kotlin pattern-matching DSL). This library is fuzzy *string* matching, has no DSL, and lives at the Maven coordinate `io.github.likhithsj:kmatch` — when in doubt, that coordinate is the identity.
 
+**Contents:** [Try it](#try-it) · [Install](#install) · [API at a glance](#api-at-a-glance) · [Scorers](#scorers) · [Extraction](#extraction) · [Dedupe and match highlighting](#dedupe-and-match-highlighting) · [Accent-insensitive search](#accent-insensitive-search) · [How parity is verified](#how-parity-is-verified) · [Performance](#performance) · [Release history and roadmap](#release-history-and-roadmap) · [Samples](#samples) · [Building and testing](#building-and-testing)
+
 ## Try it
 
 **[Live playground →](https://likhithsj.github.io/kmatch/)** — compare strings across every scorer, search a collection with match highlighting, flip the accent fold on and off, and play with category boosts (raw vs boosted ranking, side by side), running the real library as Kotlin/JS in your browser. **[API docs →](https://likhithsj.github.io/kmatch/api/)** (Source in [`demo/`](demo/).)
@@ -23,14 +25,31 @@ New to the codebase? **[docs/learn/](docs/learn/)** is a seven-part guided tour 
 ## Install
 
 ```kotlin
-implementation("io.github.likhithsj:kmatch:1.0.0")
+implementation("io.github.likhithsj:kmatch:1.0.1")
 ```
 
 One dependency line for all 19 targets: JVM/Android, iOS (device + both simulators), macOS, watchOS, tvOS, JS, Wasm, Linux, Windows, Android Native — Gradle selects the right artifact automatically. The JVM artifact targets Java 8 bytecode, so it runs on any JVM from 8 up. Consuming from Swift? See the [SKIE sample](samples/ios-skie/).
 
-1.0.0 is the current release. Two RapidFuzz-parity fixes made since are not released yet; see [Roadmap](#roadmap) for what they change.
+**Requirements.** Any JVM from 8 up, with any build tool. The non-JVM artifacts need a reasonably recent Kotlin toolchain in the consuming project; the library is built with Kotlin 2.2.21. There are no transitive dependencies to manage.
+
+**Upgrading from 1.0.0.** 1.0.1 is a drop-in replacement: same API, two corrections that bring scores closer to RapidFuzz in narrow situations (a `scoreCutoff` sitting exactly on a score, and no-break spaces in unprocessed non-Latin-1 text). Details are under [Release history](#release-history-and-roadmap) and in [CHANGELOG.md](CHANGELOG.md). If you tuned thresholds against 1.0.0, nothing moves unless you hit one of those two cases.
 
 Want to see it inside a real app? [`samples/starbucks-menu/`](samples/starbucks-menu/) is an Android + iOS app that pulls a real menu from the web and searches it with kmatch. All samples are listed [below](#samples).
+
+## API at a glance
+
+Everything is in the package `io.github.likhithsj.kmatch`.
+
+| You want to | Use |
+|---|---|
+| Score two strings | `Fuzz.ratio`, `partialRatio`, `tokenSortRatio`, `tokenSetRatio`, `tokenRatio`, `partialTokenSortRatio`, `partialTokenSetRatio`, `partialTokenRatio`, `weightedRatio`, `quickRatio` |
+| Find the best matches in a collection | `extractOne`, `extractTop`, `extractSorted`, `extractAll`: over strings, over your own records with `keySelector`, or over several fields per record with `keySelectors` |
+| Choose how extraction scores | One of the ten `Scorers` presets (`Scorers.WeightedRatio` is the default), or your own `Scorer { a, b, cutoff -> ... }` |
+| Clean text before scoring | `defaultProcess` (RapidFuzz's own), `searchFold` (accent-insensitive search), `stripAccents` (the fold alone) |
+| Collapse near-duplicates | `dedupe` |
+| Show why something matched | `matchingRanges`, `matchingBlocks` |
+
+Every scorer and every `extract*` function takes an optional `processor` and an optional `scoreCutoff`. The sections below go through each row; the [API reference](https://likhithsj.github.io/kmatch/api/) has the full signatures.
 
 ## Scorers
 
@@ -143,7 +162,7 @@ The fold is deliberately conservative: NFKD plus mark-stripping only for scripts
 
 `tools/generate_vectors.py` pins RapidFuzz 3.14.5 and emits `GoldenVectors.kt` — 4,380 (inputs, scorer, expected score) cases: 1,680 plain scores and 2,700 `scoreCutoff` cases. They cover plain ASCII, accented Latin, astral-plane characters, empty strings, strings past 64 code points, token edge cases, non-Latin scripts through `defaultProcess`, token separators that depend on the string, and cutoffs placed exactly on a score and one floating-point step either side of it. CI asserts **exact** float64 equality on every tested target and regenerates the vectors to catch drift.
 
-Fixed vectors only pin cases someone thought of. [`tools/differential-fuzz`](tools/differential-fuzz/) covers the rest: random inputs, answered by RapidFuzz and by kmatch, compared bit for bit, about 254,000 comparisons in a default run. Its first run found two parity bugs in 1.0.0 (see [Roadmap](#roadmap)); the current tree is clean over a million comparisons across two seeds.
+Fixed vectors only pin cases someone thought of. [`tools/differential-fuzz`](tools/differential-fuzz/) covers the rest: random inputs, answered by RapidFuzz and by kmatch, compared bit for bit, about 254,000 comparisons in a default run. Its first run found two parity bugs in 1.0.0, both fixed in 1.0.1 (see [Release history](#release-history-and-roadmap)); 1.0.1 is clean over a million comparisons across two seeds.
 
 `defaultProcess` and tokenization use Unicode tables probed directly from RapidFuzz's C++ backend (`tools/generate_unicode_tables.py`) rather than any host platform's Unicode APIs. The backends genuinely differ from Python's `re` module, from Java's `Character`, and from RapidFuzz's own pure-Python fallback: underscore handling, simple vs. full case mapping, and which characters separate tokens. One example kmatch reproduces: in the C++ backend a no-break space (U+00A0) separates tokens only in strings that contain a character above U+00FF, so `"Łódź\u00A0Kaliska"` is two tokens and `"Zürich\u00A0HB"` is one. The probe-derived tables make kmatch match what `pip install rapidfuzz` users actually observe.
 
@@ -176,15 +195,17 @@ Same harness (`thirdPartyComparison`), same data, each library's own API; 2,000 
 
 Throughput comparison only — output scales and rounding differ between libraries (kmatch is the one matching RapidFuzz bit-exactly). Both libraries are JVM-test-only dependencies of the benchmark; the shipped artifact stays zero-dependency.
 
-## Roadmap
+## Release history and roadmap
+
+Full notes for every release are in [CHANGELOG.md](CHANGELOG.md).
 
 - ✅ **0.1.0–0.2.0** (development milestones, never published) — parity core, then the bit-parallel performance core.
 - ✅ **0.3.0** (first release on Maven Central) — generic extraction, `dedupe`, `matchingRanges`, published benchmarks, playground, API docs.
 - ✅ **0.3.1** (released) — JVM artifact targets Java 8 bytecode, so it loads on any JVM from 8 up.
-- ✅ **1.0.0** (released, current) — API freeze, closing the early-adopter feedback round: built-in accent folding (`searchFold`, `stripAccents`) and multi-field extraction (`keySelectors`, best field wins) shipped. The prepared-query cache stays internal (extraction uses it automatically) and lazy `Sequence` extraction is deferred — both can be added later without breaking anything, which is the test an API freeze has to pass.
-- 🔧 **Unreleased (1.0.1 candidate)** — two RapidFuzz parity fixes found by differential fuzzing. No API change; scores move only in these two situations, toward RapidFuzz:
-  - `partialRatio` and everything built on it (`partialTokenSortRatio`, `partialTokenSetRatio`, `partialTokenRatio`, `weightedRatio`, and extraction with them) could return 0.0 when `scoreCutoff` was within one floating-point step of the true score — the true score itself included. It depended on how the particular score rounds, so most calls were unaffected. `Fuzz.partialRatio("abbabbaabba", "bababa")` is 83.33333333333334; passing that back as the cutoff returned 0.0 in 1.0.0 and returns the score now.
-  - Token scorers on unprocessed input did not split on NBSP (U+00A0) or NEL (U+0085) in strings containing a character above U+00FF. `tokenSortRatio("Łódź\u00A0Kaliska", "Kaliska Łódź")` was 58.3 in 1.0.0 and is 100.0 now, as in RapidFuzz. Input that goes through `defaultProcess` or `searchFold` was never affected.
+- ✅ **1.0.0** (released) — API freeze, closing the early-adopter feedback round: built-in accent folding (`searchFold`, `stripAccents`) and multi-field extraction (`keySelectors`, best field wins) shipped. The prepared-query cache stays internal (extraction uses it automatically) and lazy `Sequence` extraction is deferred — both can be added later without breaking anything, which is the test an API freeze has to pass.
+- ✅ **1.0.1** (released, current) — two RapidFuzz parity fixes found by differential fuzzing. No API change; scores move only in these two situations, toward RapidFuzz:
+  - `partialRatio` and everything built on it (`partialTokenSortRatio`, `partialTokenSetRatio`, `partialTokenRatio`, `weightedRatio`, and extraction with them) could return 0.0 when `scoreCutoff` was within one floating-point step of the true score — the true score itself included. It depended on how the particular score rounds, so most calls were unaffected. `Fuzz.partialRatio("abbabbaabba", "bababa")` is 83.33333333333334; passing that back as the cutoff returned 0.0 in 1.0.0 and returns the score in 1.0.1.
+  - Token scorers on unprocessed input did not split on NBSP (U+00A0) or NEL (U+0085) in strings containing a character above U+00FF. `tokenSortRatio("Łódź\u00A0Kaliska", "Kaliska Łódź")` was 58.3 in 1.0.0 and is 100.0 in 1.0.1, as in RapidFuzz. Input that goes through `defaultProcess` or `searchFold` was never affected.
 - **Next (1.x candidates, additive only)** — a public prepared-query API, lazy `Sequence` extraction, weighted multi-field scoring. Driven by adopter feedback: [open an issue](https://github.com/likhithsj/kmatch/issues).
 
 ## Samples
@@ -197,7 +218,23 @@ Throughput comparison only — output scales and rounding differ between librari
 | [`samples/ios-skie`](samples/ios-skie/) | Calling kmatch from Swift through SKIE, with assertions. |
 | [`samples/consumer-check`](samples/consumer-check/) + [`-android`](samples/consumer-check-android/) | The consumers of the *published* artifact behind [VERIFICATION.md](VERIFICATION.md): tests executed on 13 environments, compile checks on four more targets. |
 
+## Building and testing
+
+```bash
+./gradlew jvmTest                                   # fastest full check: all 4,380 golden vectors plus the unit tests
+./gradlew jsNodeTest wasmJsNodeTest linuxX64Test    # the other targets CI runs on Linux
+./gradlew build iosSimulatorArm64Test macosArm64Test   # everything, on a Mac
+
+pip install rapidfuzz==3.14.5
+python3 tools/generate_vectors.py && python3 tools/generate_unicode_tables.py   # regenerate from RapidFuzz; must leave no git diff
+tools/differential-fuzz/run.sh                      # random comparison against RapidFuzz; must report 0 mismatches
+```
+
+The generated files (`GoldenVectors.kt`, `UnicodeTables.kt`, `FoldTables.kt`) are committed and must never be edited by hand: change the generator, rerun it, commit both. Any change under `src/commonMain` should pass the differential fuzzer before it is released, because it finds what fixed vectors cannot. Each sample is its own Gradle build and reuses the root wrapper, for example `cd samples/menu-search && ../../gradlew -p . test`.
+
 ## More documentation
+
+- [CHANGELOG.md](CHANGELOG.md) — what changed in each release.
 
 - [docs/learn/](docs/learn/) — the seven-part guided tour of the codebase.
 - [VERIFICATION.md](VERIFICATION.md) — consumer-side evidence and how to re-check parity yourself.

@@ -37,7 +37,7 @@ What the generator leans on, because that is where ports go wrong:
 Its first run, against the published 1.0.0, found two parity bugs that 3,260
 fixed vectors had not: `partialRatio` (and everything built on it) returning 0
 when the cutoff was exactly the true score, and token scorers not splitting on
-NBSP in strings with non-Latin-1 characters. Both are fixed, both now have
+NBSP in strings with non-Latin-1 characters. Both are fixed in 1.0.1, both now have
 golden vectors, and `KMATCH_VERSION=1.0.0 ./run.sh` still reproduces them.
 
 The oracle must be RapidFuzz's **C++** backend (the generator refuses to run

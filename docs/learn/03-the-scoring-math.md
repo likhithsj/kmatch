@@ -145,7 +145,8 @@ Passing `scoreCutoff = 90` means: *"if the answer would be below 90, give me
    the 0–100 scale and its prefix/suffix windows on the 0–1 scale, because
    that is what RapidFuzz's C++ code does, and the two disagree by one
    floating-point step for some scores. kmatch 1.0.0 compared everything on
-   one scale, so feeding a score back in as the cutoff could return 0. A
+   one scale, so feeding a score back in as the cutoff could return 0 (fixed
+   in 1.0.1). A
    differential fuzzer (`tools/differential-fuzz`) found it; 900 more
    vectors, with cutoffs exactly on the score and one step either side, now
    pin the behavior.

@@ -61,7 +61,7 @@ A developer anywhere writes one line:
 
 ```kotlin
 dependencies {
-    implementation("io.github.likhithsj:kmatch:1.0.0")
+    implementation("io.github.likhithsj:kmatch:1.0.1")
 }
 ```
 

@@ -45,7 +45,7 @@ running:
 **1. A real app (the normal case).** An app adds one line to its build:
 
 ```kotlin
-implementation("io.github.likhithsj:kmatch:1.0.0")
+implementation("io.github.likhithsj:kmatch:1.0.1")
 ```
 
 …and then calls a function. That call is the start:

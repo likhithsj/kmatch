@@ -58,8 +58,8 @@ every push to `main` and every pull request):
 **Known parity gaps in the published 1.0.0**
 
 The differential fuzzer was written after 1.0.0 shipped, and its first run
-found two places where 1.0.0 does not match RapidFuzz. Both are fixed in the
-repository and covered by golden vectors; neither is in a release yet.
+found two places where 1.0.0 does not match RapidFuzz. Both are **fixed in
+1.0.1** and covered by golden vectors; upgrade to get them. In 1.0.0:
 
 - `partialRatio`, `partialTokenSortRatio`, `partialTokenSetRatio`,
   `partialTokenRatio` and `weightedRatio` (and extraction using them) can
